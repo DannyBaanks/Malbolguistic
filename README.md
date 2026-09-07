@@ -1,114 +1,114 @@
 # MALBOGUISTIC
 
-> GitHub Linguist does not currently recognize Malbolge.
+> GitHub Linguist actualmente no reconoce Malbolge.
 >
-> So we translated GitHub Linguist into Malbolge instead. :p
+> Asi que tradujimos GitHub Linguist a Malbolge en su lugar. :p
 
-**This project does NOT claim that Linguist executes in Malbolge.**
+**Este proyecto NO reclama que Linguist se ejecute en Malbolge.**
 
-This project takes a pinned snapshot of [github-linguist/linguist](https://github.com/github-linguist/linguist)
-and mechanically transports it, byte for byte, through a Malbolge toolchain,
-verifying byte-identical reconstruction with SHA-256.
+Este proyecto toma un snapshot fijado de [github-linguist/linguist](https://github.com/github-linguist/linguist)
+y lo transporta mecanicamente, byte por byte, a traves de una cadena de herramientas de Malbolge,
+verificando reconstruccion byte-identica con SHA-256.
 
 ```
-github-linguist/linguist  (pinned snapshot, commit SOURCE_COMMIT.txt)
+github-linguist/linguist  (snapshot fijado, commit SOURCE_COMMIT.txt)
         ↓
-Malbolge-Translator  (vendored under vendor/malbolge_translator/)
+Malbolge-Translator  (vendored bajo vendor/malbolge_translator/)
         ↓
-Level 1: mirror/<path>.malrt1     (MALRT1 envelope, every text file, codec-verified)
-Level 2: malbolge/<path>.mal      (REAL pure Malbolge programs, executed, verified)
+Nivel 1: mirror/<path>.malrt1     (envoltura MALRT1, cada archivo de texto, codec-verificado)
+Nivel 2: malbolge/<path>.mal      (programas REALES de Malbolge, ejecutados, verificados)
         ↓
-reverse translation (decode + execution)
+traduccion reversa (decode + ejecucion)
         ↓
-SHA-256 parity against the original bytes
+paridad SHA-256 contra los bytes originales
 ```
 
-## Two levels, no fakes
+## Dos niveles, sin falsos
 
-| Level | Scope | Artifact | Claim |
+| Nivel | Alcance | Artifact | Reclamo |
 |---|---|---|---|
-| 1 — Codec mirror | **every** TEXT file | `mirror/**/*.malrt1` | `CODEC_MIRROR_PARITY`: source bytes → MALRT1 → decode → identical SHA-256 |
-| 2 — Real Malbolge | TEXT files ≤ N bytes, under a wall-clock budget | `malbolge/**/*.mal` | `FULL_EXECUTED_ROUNDTRIP`: source → synthesized pure Malbolge → canonical execution → decode → identical SHA-256 |
+| 1 — Codec mirror | **cada** archivo TEXT | `mirror/**/*.malrt1` | `CODEC_MIRROR_PARITY`: bytes fuente → MALRT1 → decode → SHA-256 identico |
+| 2 — Malbolge real | archivos TEXT ≤ N bytes, bajo presupuesto de wall-clock | `malbolge/**/*.mal` | `FULL_EXECUTED_ROUNDTRIP`: fuente → Malbolge puro sintetizado → ejecucion canonica → decode → SHA-256 identico |
 
-CODEC ROUNDTRIP ≠ FULL MALBOLGE E2E FOR ARBITRARILY HUGE FILES.
-Level 2 synthesis cost in this toolchain is roughly **~0.7 s per source byte**
-(measured on this host), so a 130 KB `languages.yml` would take ~25 hours.
-We do not pretend otherwise: every file not synthesized is marked
-`SKIPPED_TOO_LARGE` or `SKIPPED_BUDGET` in the manifest. Nothing is hidden.
+CODEC ROUNDTRIP ≠ FULL MALBOLGE E2E PARA ARCHIVOS ARBITRARiAMENTE GRANDES.
+El costo de sintesis del nivel 2 en esta cadena de herramientas es aproximadamente **~0.7 s por byte fuente**
+(medido en este host), asi que un `languages.yml` de 130 KB tomaria ~25 horas.
+No pretendemos lo contrario: cada archivo no sintetizado se marca
+`SKIPPED_TOO_LARGE` o `SKIPPED_BUDGET` en el manifest. Nada se oculta.
 
-A `.malrt1` envelope is ASCII text (`MALRT1:<base64>:<sha256>`), **not** a
-Malbolge program. Only files under `malbolge/` are executable Malbolge.
+Una envoltura `.malrt1` es texto ASCII (`MALRT1:<base64>:<sha256>`), **no** un
+programa Malbolge. Solo los archivos bajo `malbolge/` son Malbolge ejecutable.
 
-## Current run (commit pinned: befd3af35e70150b76458085208435eef9286bb3)
+## Ejecucion actual (commit fijado: befd3af35e70150b76458085208435eef9286bb3)
 
-| Metric | Value |
+| Metrica | Valor |
 |---|---|
-| Source files (incl. 3 recorded symlinks) | 4,281 |
-| Text files mirrored (level 1) | 4,258 / 4,258 (codec parity, 0 mismatches) |
-| Binary files skipped | 20 |
-| **Real Malbolge programs synthesized + executed (level 2)** | **379 / 379 eligible (≤128 B), 0 failures** |
-| Original text bytes | 31,647,823 |
-| Mirror envelope bytes (`mirror/`) | 42,509,444 (×1.34) |
-| Real Malbolge program bytes (`malbolge/`) | 1,421,372 from 21,902 source bytes |
-| Expansion ratio (level 2) | min ×41.7 · median ×67.8 · max ×462.8 |
+| Archivos fuente (incl. 3 symlinks registrados) | 4,281 |
+| Archivos de texto mirror-eados (nivel 1) | 4,258 / 4,258 (paridad codec, 0 desajustes) |
+| Archivos binarios saltados | 20 |
+| **Programas reales de Malbolge sintetizados + ejecutados (nivel 2)** | **379 / 379 elegibles (≤128 B), 0 fallos** |
+| Bytes de texto originales | 31,647,823 |
+| Bytes de envoltura mirror (`mirror/`) | 42,509,444 (×1.34) |
+| Bytes de programa real de Malbolge (`malbolge/`) | 1,421,372 desde 21,902 bytes fuente |
+| Ratio de expansion (nivel 2) | min ×41.7 · mediana ×67.8 · max ×462.8 |
 
-Full details: `evidence/metrics.json`, `evidence/roundtrip.json`,
-`evidence/VERDICTS.md` (claim table), and `manifest/translation_manifest.json`
-(one entry per text file; its SHA-256 is `evidence/manifest_sha256.txt`).
+Detalles completos: `evidence/metrics.json`, `evidence/roundtrip.json`,
+`evidence/VERDICTS.md` (tabla de claims), y `manifest/translation_manifest.json`
+(una entrada por archivo de texto; su SHA-256 es `evidence/manifest_sha256.txt`).
 
-## Reproduce
+## Reproducir
 
-Requires Python ≥ 3.10 and the `malbolge-generator` package (importable as
-`malbolge`, MIT). On this rig: `py` (bare `python` is shimmed away).
-
-```
-py tools/build_malboguistic.py                # full: level 1 + level 2 (default 1 h budget)
-py tools/build_malboguistic.py --level1-only  # codec mirror only, seconds
-```
-
-Options: `--e2e-max-bytes` (default 128), `--e2e-budget-seconds` (default 3600),
-`--workers`, `--resume` (reuses prior PASS results for unchanged sources).
-
-Exit code 0 ⇔ zero codec mismatches AND zero failed executions.
-
-## Disclaimers
-
-GENERATED CORPUS ≠ ORGANIC USAGE.
-
-This corpus must NOT be presented as evidence of real-world Malbolge adoption.
-Do not say "Malbolge now has N thousand files of real usage" because of this
-repo. That would be false.
-
-The claim here is:
+Requiere Python ≥ 3.10 y el paquete `malbolge-generator` (importable como
+`malbolge`, MIT). En este equipo: `py` (bare `python` esta shimmed).
 
 ```
-LINGUIST_TRANSLATED_TO_MALBOLGE = DEMONSTRATED (for the files listed PASS)
+py tools/build_malboguistic.py                # completo: nivel 1 + nivel 2 (default 1 h de budget)
+py tools/build_malboguistic.py --level1-only  # solo codec mirror, segundos
 ```
 
-and emphatically NOT:
+Opciones: `--e2e-max-bytes` (default 128), `--e2e-budget-seconds` (default 3600),
+`--workers`, `--resume` (reusa resultados PASS previos para fuentes sin cambios).
+
+Exit code 0 ⇔ cero desajustes de codec Y cero ejecuciones fallidas.
+
+## Avisos
+
+CORPUS GENERADO ≠ USO ORGANICO.
+
+Este corpus NO debe presentarse como evidencia de adopcion real de Malbolge.
+No digas "Malbolge ahora tiene N thousand archivos de uso real" por causa de este
+repo. Eso seria falso.
+
+El reclamo aqui es:
+
+```
+LINGUIST_TRANSLATED_TO_MALBOLGE = DEMONSTRATED (para los archivos listados PASS)
+```
+
+y enfaticamente NO:
 
 ```
 LINGUIST_RUNS_ON_MALBOLGE = NOT_CLAIMED
 ```
 
-Malbolge contains Linguist. Linguist still contains no Malbolge. :p
+Malbolge contiene a Linguist. Linguist sigue sin contener Malbolge. :p
 
 ## Layout
 
 ```
-vendor/source_snapshot/      pinned linguist tree (no .git) + its LICENSE
-vendor/malbolge_translator/  vendored translator package (MIT), see vendor/TRANSLATOR_SOURCE.txt
-mirror/                      LEVEL 1 artifacts: <path>.malrt1 (codec envelopes)
-malbolge/                    LEVEL 2 artifacts: <path>.mal (real, executed programs)
+vendor/source_snapshot/      arbol fijado de linguist (sin .git) + su LICENSE
+vendor/malbolge_translator/  paquete traductor vendored (MIT), ver vendor/TRANSLATOR_SOURCE.txt
+mirror/                      artifacts NIVEL 1: <path>.malrt1 (envolturas de codec)
+malbolge/                    artifacts NIVEL 2: <path>.mal (programas reales ejecutados)
 manifest/                    source_inventory.json, translation_manifest.json
 evidence/                    roundtrip.json, metrics.json, VERDICTS.md, hashes
-tools/build_malboguistic.py  the one-command reproducible build
-SOURCE_REPO.txt / SOURCE_COMMIT.txt   provenance of the snapshot
+tools/build_malboguistic.py  el build reproducible de un comando
+SOURCE_REPO.txt / SOURCE_COMMIT.txt   procedencia del snapshot
 ```
 
-## License
+## Licencia
 
-MALBOGUISTIC build tooling: MIT (see LICENSE).
-The Linguist snapshot retains its own MIT license (`vendor/source_snapshot/LICENSE`).
-The vendored translator is MIT (`vendor/malbolge_translator/LICENSE`).
-See THIRD_PARTY_NOTICES.md.
+Build tools de MALBOGUISTIC: MIT (ver LICENSE).
+El snapshot de Linguist conserva su propia licencia MIT (`vendor/source_snapshot/LICENSE`).
+El traductor vendored es MIT (`vendor/malbolge_translator/LICENSE`).
+Ver THIRD_PARTY_NOTICES.md.
