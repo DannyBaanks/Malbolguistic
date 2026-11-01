@@ -1,0 +1,3 @@
+{"source": "samples/Text/foo.txt", "bytes": 4, "depth": 5, "s": 6.01, "s_per_byte": 1.5, "chars": 2610, "roundtrip_pass": true, "identical_to_committed": false}
+{"source": "samples/Text/foo.txt", "bytes": 4, "depth": 5, "s": 3.95, "s_per_byte": 0.99, "chars": 2148, "roundtrip_pass": true, "identical_to_committed": false}
+{"source": "samples/Text/foo.txt", "bytes": 4, "depth": 5, "s": 3.27, "s_per_byte": 0.82, "chars": 1900, "roundtrip_pass": true, "identical_to_committed": false}

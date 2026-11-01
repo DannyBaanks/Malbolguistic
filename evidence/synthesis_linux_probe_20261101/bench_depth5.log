@@ -1,0 +1,6 @@
+{'source': 'samples/Text/foo.txt', 'bytes': 4, 'depth': 5, 's': 5.71, 's_per_byte': 1.43, 'chars': 2328, 'roundtrip_pass': True, 'identical_to_committed': False}
+{'source': 'samples/Csound Score/allglass.sco', 'bytes': 16, 'depth': 5, 's': 8.47, 's_per_byte': 0.53, 'chars': 2775, 'roundtrip_pass': True, 'identical_to_committed': False}
+{'source': 'samples/Markdown/minimal.md', 'bytes': 32, 'depth': 5, 's': 8.67, 's_per_byte': 0.27, 'chars': 3103, 'roundtrip_pass': True, 'identical_to_committed': False}
+{'source': 'samples/Shell/filenames/.zshenv', 'bytes': 48, 'depth': 5, 's': 15.7, 's_per_byte': 0.33, 'chars': 4097, 'roundtrip_pass': True, 'identical_to_committed': False}
+{'source': 'samples/Checksums/single_hash_no_trailing_newline.sha256', 'bytes': 64, 'depth': 5, 's': 15.36, 's_per_byte': 0.24, 'chars': 3941, 'roundtrip_pass': True, 'identical_to_committed': False}
+{'source': '.github/CODEOWNERS', 'bytes': 96, 'depth': 5, 's': 21.19, 's_per_byte': 0.22, 'chars': 4778, 'roundtrip_pass': True, 'identical_to_committed': False}

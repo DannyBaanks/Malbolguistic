@@ -8,3 +8,21 @@ additional_runtime_dependency: malbolge-generator (MIT), importable as `malbolge
   Install: `pip install malbolge-generator` or from the malbolge-toolkit repo.
   WITHOUT it, level 1 (codec mirror) still builds; level 2 (real Malbolge
   synthesis + execution) reports SYNTHESIS_UNAVAILABLE honestly.
+
+correction_2026-11-01 (append-only; lines 1-10 left as written on 2026-09-03):
+  Line 8 is not achievable as stated. `malbolge-generator` does NOT exist on PyPI —
+  measured 2026-11-01: `pip index versions malbolge-generator` -> "No matching
+  distribution found".
+  What the dependency actually is: the `malbolge/` package of malbolge-toolkit
+  (upstream https://github.com/wallstop/malbolge-toolkit, MIT, author "Wallstop"),
+  whose pyproject declares name = "malbolge-generator", version = 0.1.0,
+  requires-python >= 3.11. Installation is therefore a LOCAL pip install of that
+  directory, not a registry install.
+  On this host the only copy is inside the ISyCo monorepo at
+  workspace/malbolge_toolkit (git HEAD 6555c55691d6cb78f70b742336bd090ca3c174d6).
+  Caveat recorded on purpose: that copy has local modifications (opt-in
+  shared_state_cache in malbolge/generator.py, touched 2026-09-05, i.e. AFTER this
+  corpus was built on 2026-09-03/04). It is NOT established to be the engine that
+  produced the committed .mal programs; byte-identical re-synthesis is measured, not
+  assumed. Level 2 re-verification does not depend on it at all — see
+  vendor/oracles/PROVENANCE.txt and tools/verify_corpus.py.

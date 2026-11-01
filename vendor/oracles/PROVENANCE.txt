@@ -1,0 +1,35 @@
+# ORACLE SOURCES — procedencia y pines
+
+Estos dos interpretadores Malbolge son THIRD PARTY / de repos hermanos, no código de
+MALBOGUISTIC. Se vendorizan para que `tools/verify_corpus.py` no dependa de rutas de
+un host ni de un repo hermano presente.
+
+## mb_ref.c — oráculo estricto de referencia
+- sha256: a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3
+- origen: repo BolgeForge, ruta oracle/mb_ref.c
+- commit BolgeForge: 1dc5cb5 (HEAD del repo 7b4fbacf2d7d58cdfadd83a48af17128c2c776f6)
+- mismo byte en Malbolge-PureEpoch vendor/mb_ref.c y torus/vendor/mb_ref.c (verificado)
+- licencia: MIT (Copyright (c) 2026 ISyCo Contributors), LICENSE del repo BolgeForge
+- CLI: `mb_ref prog.mal [max_steps] < input > output`; presupuesto por defecto 100000000 pasos
+- exit codes: 0 HALT · 1 fuente/args inválidos · 2 presupuesto agotado ·
+  3 NONPRINTABLE_PC / INVALID_ENCRYPTION · 4 fallo stdin/stdout
+- semántica: Classic Olmstead, cinta 59049 = 3^10, padwidth 10, auto-wrap de c/d,
+  `in` en EOF = 59048 = 3^10 − 1; loader estricto (whitespace no ocupa celda, toda
+  celda debe decodificar a `ji*p</vo`)
+
+## olmstead_original.c — oráculo independiente (histórico)
+- sha256: 05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510
+- origen: repo Malbolge-PureEpoch, ruta vendor/olmstead_original.c
+- commit PureEpoch: 48ddc15 (HEAD del repo d09a42f8efac1287e6a0aa8bb70f62214a82f97d)
+- autoría: Ben Olmstead, 1998; el propio header declara dominio público
+  ("I hereby place it in the public domain. Have fun...")
+- CLI: `olmstead prog.mal` (argc debe ser 2); lee stdin; sin presupuesto de pasos,
+  por lo que el verificador le aplica timeout de proceso
+- punto de interés: `if (x == EOF) a = 59048;` y wrap en 59048, sin post-decifrado
+  adicional — es un linaje de implementación distinto al de mb_ref.c
+
+## Por qué dos motores
+`mb_ref.c` (BolgeForge) y `Malbolge-PureEpoch/vendor/mb_ref.c` son byte-idénticos, así
+que NO son evidencia independiente entre sí. El acuerdo byte-exacto de un artefacto
+bajo `mb_ref.c` Y bajo `olmstead_original.c` sí lo es: dos linajes de implementación
+distintos, con cargadores y manejo de entrada separados.
