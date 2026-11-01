@@ -1,0 +1,206 @@
+{
+ "repeats_per_point": 3,
+ "workloads": [
+  {
+   "input_bytes": 744,
+   "input_sha256": "e6770327714ce47f30814f7f39807443809281bc1830026f63670bf7db147ff1",
+   "zig_canonical": {
+    "wall_s": 0.0028,
+    "rc": 0,
+    "steps": 310251,
+    "byte_exact": true,
+    "steps_per_s": 110803928
+   },
+   "oracle_mb_ref": {
+    "wall_s": 0.0019,
+    "rc": 0,
+    "byte_exact": true,
+    "derived_steps_per_s": 163290000
+   },
+   "zig_bolg1": {
+    "wall_s": 0.0286,
+    "rc": 0,
+    "steps": 309976,
+    "byte_exact": true
+   },
+   "native_step_count_delta": 275
+  },
+  {
+   "input_bytes": 8192,
+   "input_sha256": "8bbe010375f2aeec8159719653428987a496c096b9edefe0c3d0c59e585ec064",
+   "zig_canonical": {
+    "wall_s": 0.0102,
+    "rc": 0,
+    "steps": 3341587,
+    "byte_exact": true,
+    "steps_per_s": 327606568
+   },
+   "oracle_mb_ref": {
+    "wall_s": 0.0093,
+    "rc": 0,
+    "byte_exact": true,
+    "derived_steps_per_s": 359310430
+   },
+   "zig_bolg1": {
+    "wall_s": 0.0354,
+    "rc": 0,
+    "steps": 3341312,
+    "byte_exact": true
+   },
+   "native_step_count_delta": 275
+  },
+  {
+   "input_bytes": 65536,
+   "input_sha256": "aaad2c31d4e4000665e31e6ad303fe134de86886af74ea60f8abeed332290db5",
+   "zig_canonical": {
+    "wall_s": 0.0657,
+    "rc": 0,
+    "steps": 26680595,
+    "byte_exact": true,
+    "steps_per_s": 406097336
+   },
+   "oracle_mb_ref": {
+    "wall_s": 0.0678,
+    "rc": 0,
+    "byte_exact": true,
+    "derived_steps_per_s": 393519100
+   },
+   "zig_bolg1": {
+    "wall_s": 0.0882,
+    "rc": 0,
+    "steps": 26680320,
+    "byte_exact": true
+   },
+   "native_step_count_delta": 275
+  },
+  {
+   "input_bytes": 719637,
+   "input_sha256": "190b0fd912ca60a41bb8c7a6fb61e0d62dcafb62e89728b32caf3f6279ad9cd1",
+   "zig_canonical": {
+    "wall_s": 0.6952,
+    "rc": 0,
+    "steps": 292899702,
+    "byte_exact": true,
+    "steps_per_s": 421317177
+   },
+   "oracle_mb_ref": {
+    "wall_s": 0.7099,
+    "rc": 0,
+    "byte_exact": true,
+    "derived_steps_per_s": 412592903
+   },
+   "zig_bolg1": {
+    "wall_s": 0.0854,
+    "rc": 3,
+    "steps": 26680634,
+    "byte_exact": false
+   },
+   "native_step_count_delta": 266219068
+  }
+ ],
+ "counting_convention_level1": {
+  "artifacts_checked": 8,
+  "all_four_reports_equal": 8,
+  "detail": [
+   {
+    "manifest": 2196,
+    "zig_canonical": 2196,
+    "zig_bolg1": 2196,
+    "toolkit_python": 2196,
+    "all_equal": true,
+    "artifact": "malbolge/.dockerignore.mal"
+   },
+   {
+    "manifest": 2820,
+    "zig_canonical": 2820,
+    "zig_bolg1": 2820,
+    "toolkit_python": 2820,
+    "all_equal": true,
+    "artifact": "malbolge/samples/Cirru/folding.cirru.mal"
+   },
+   {
+    "manifest": 5478,
+    "zig_canonical": 5478,
+    "zig_bolg1": 5478,
+    "toolkit_python": 5478,
+    "all_equal": true,
+    "artifact": "malbolge/samples/INI/filenames/.gitreview.mal"
+   },
+   {
+    "manifest": 4805,
+    "zig_canonical": 4805,
+    "zig_bolg1": 4805,
+    "toolkit_python": 4805,
+    "all_equal": true,
+    "artifact": "malbolge/samples/Nemerle/hello.n.mal"
+   },
+   {
+    "manifest": 2820,
+    "zig_canonical": 2820,
+    "zig_bolg1": 2820,
+    "toolkit_python": 2820,
+    "all_equal": true,
+    "artifact": "malbolge/samples/Ruby/macruby.mal"
+   },
+   {
+    "manifest": 3633,
+    "zig_canonical": 3633,
+    "zig_bolg1": 3633,
+    "toolkit_python": 3633,
+    "all_equal": true,
+    "artifact": "malbolge/samples/Stata/hello.ado.mal"
+   },
+   {
+    "manifest": 2512,
+    "zig_canonical": 2512,
+    "zig_bolg1": 2512,
+    "toolkit_python": 2512,
+    "all_equal": true,
+    "artifact": "malbolge/samples/YARA/true.yar.mal"
+   },
+   {
+    "manifest": 1925,
+    "zig_canonical": 1925,
+    "zig_bolg1": 1925,
+    "toolkit_python": 1925,
+    "all_equal": true,
+    "artifact": "malbolge/test/fixtures/Data/blank.mal"
+   }
+  ]
+ },
+ "toolkit_python_in_process": [
+  {
+   "artifact": "malbolge/samples/Swift/section-37.swift.mal",
+   "wall_s": 0.011,
+   "steps": 6153,
+   "in_process_steps_per_s": 584664
+  },
+  {
+   "artifact": "malbolge/samples/Scala/scala.mal",
+   "wall_s": 0.01,
+   "steps": 6479,
+   "in_process_steps_per_s": 652484
+  },
+  {
+   "artifact": "malbolge/samples/PHP/root.php.mal",
+   "wall_s": 0.011,
+   "steps": 6882,
+   "in_process_steps_per_s": 644147
+  }
+ ],
+ "rates_steps_per_s": {
+  "zig_canonical_best": 421317177,
+  "oracle_mb_ref_derived_from_zig_canonical": 412592903,
+  "toolkit_python_in_process_best": 652484
+ },
+ "ratios": {
+  "zig_canonical_over_toolkit_python": 646,
+  "zig_canonical_over_oracle": 1.021
+ },
+ "caveats": [
+  "mb_ref reports no step count; its rate is derived from the canonical Zig engine's count on workloads where both produced byte-identical stdout.",
+  "Subprocess walls include process start (about 1-2 ms for the Zig binary), so short workloads understate the native rate.",
+  "The toolkit rate is in-process and therefore excludes interpreter start and module import; the other three include them.",
+  "native_step_count_delta compares two engines that both produced the right bytes but counted differently; it is zero on level-1 artifacts."
+ ]
+}

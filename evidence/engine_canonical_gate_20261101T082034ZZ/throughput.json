@@ -1,0 +1,176 @@
+{
+ "workloads": [
+  {
+   "workload": "cat_compact.mal <- pinned snapshot prefix",
+   "input_bytes": 744,
+   "input_sha256": "e6770327714ce47f30814f7f39807443809281bc1830026f63670bf7db147ff1",
+   "oracle_mb_ref": {
+    "wall_s": 0.002,
+    "rc": 0,
+    "stdout_is_input": true,
+    "derived_steps_per_s": 154988000
+   },
+   "zig_bolg1": {
+    "wall_s": 0.028,
+    "rc": 0,
+    "steps": 309976,
+    "stdout_is_input": true,
+    "note": "steps=309976 term=1 reason=2",
+    "steps_per_s": 11070571
+   }
+  },
+  {
+   "workload": "cat_compact.mal <- pinned snapshot prefix",
+   "input_bytes": 8192,
+   "input_sha256": "8bbe010375f2aeec8159719653428987a496c096b9edefe0c3d0c59e585ec064",
+   "oracle_mb_ref": {
+    "wall_s": 0.01,
+    "rc": 0,
+    "stdout_is_input": true,
+    "derived_steps_per_s": 334131200
+   },
+   "zig_bolg1": {
+    "wall_s": 0.034,
+    "rc": 0,
+    "steps": 3341312,
+    "stdout_is_input": true,
+    "note": "steps=3341312 term=1 reason=2",
+    "steps_per_s": 98273882
+   }
+  },
+  {
+   "workload": "cat_compact.mal <- pinned snapshot prefix",
+   "input_bytes": 65536,
+   "input_sha256": "aaad2c31d4e4000665e31e6ad303fe134de86886af74ea60f8abeed332290db5",
+   "oracle_mb_ref": {
+    "wall_s": 0.07,
+    "rc": 0,
+    "stdout_is_input": true,
+    "derived_steps_per_s": 381147428
+   },
+   "zig_bolg1": {
+    "wall_s": 0.097,
+    "rc": 0,
+    "steps": 26680320,
+    "stdout_is_input": true,
+    "note": "steps=26680320 term=1 reason=2",
+    "steps_per_s": 275054845
+   }
+  },
+  {
+   "workload": "cat_compact.mal <- pinned snapshot prefix",
+   "input_bytes": 719637,
+   "input_sha256": "190b0fd912ca60a41bb8c7a6fb61e0d62dcafb62e89728b32caf3f6279ad9cd1",
+   "oracle_mb_ref": {
+    "wall_s": 0.724,
+    "rc": 0,
+    "stdout_is_input": true
+   },
+   "zig_bolg1": {
+    "wall_s": 0.093,
+    "rc": 3,
+    "steps": 26680634,
+    "stdout_is_input": false,
+    "note": "steps=26680634 term=0 reason=3"
+   },
+   "steps_derivable": false
+  }
+ ],
+ "counting_convention": {
+  "artifacts_checked": 8,
+  "all_three_reports_equal": 8,
+  "detail": [
+   {
+    "artifact": "malbolge/.dockerignore.mal",
+    "manifest_steps": 2196,
+    "zig_bolg1_steps": 2196,
+    "toolkit_python_steps": 2196,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/Cirru/folding.cirru.mal",
+    "manifest_steps": 2820,
+    "zig_bolg1_steps": 2820,
+    "toolkit_python_steps": 2820,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/INI/filenames/.gitreview.mal",
+    "manifest_steps": 5478,
+    "zig_bolg1_steps": 5478,
+    "toolkit_python_steps": 5478,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/Nemerle/hello.n.mal",
+    "manifest_steps": 4805,
+    "zig_bolg1_steps": 4805,
+    "toolkit_python_steps": 4805,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/Ruby/macruby.mal",
+    "manifest_steps": 2820,
+    "zig_bolg1_steps": 2820,
+    "toolkit_python_steps": 2820,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/Stata/hello.ado.mal",
+    "manifest_steps": 3633,
+    "zig_bolg1_steps": 3633,
+    "toolkit_python_steps": 3633,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/samples/YARA/true.yar.mal",
+    "manifest_steps": 2512,
+    "zig_bolg1_steps": 2512,
+    "toolkit_python_steps": 2512,
+    "all_equal": true
+   },
+   {
+    "artifact": "malbolge/test/fixtures/Data/blank.mal",
+    "manifest_steps": 1925,
+    "zig_bolg1_steps": 1925,
+    "toolkit_python_steps": 1925,
+    "all_equal": true
+   }
+  ],
+  "verdict": "SHARED"
+ },
+ "toolkit_python_in_process": [
+  {
+   "artifact": "malbolge/samples/Swift/section-37.swift.mal",
+   "wall_s": 0.014,
+   "steps": 6153,
+   "halted": true,
+   "in_process_steps_per_s": 453595
+  },
+  {
+   "artifact": "malbolge/samples/Scala/scala.mal",
+   "wall_s": 0.01,
+   "steps": 6479,
+   "halted": true,
+   "in_process_steps_per_s": 625106
+  },
+  {
+   "artifact": "malbolge/samples/PHP/root.php.mal",
+   "wall_s": 0.011,
+   "steps": 6882,
+   "halted": true,
+   "in_process_steps_per_s": 621732
+  }
+ ],
+ "rates_steps_per_s": {
+  "oracle_mb_ref_derived": 381147428,
+  "zig_bolg1": 275054845,
+  "toolkit_python_in_process": 625106
+ },
+ "caveats": [
+  "mb_ref does not report steps; its rate is derived from the cell-dump engine's count on workloads where both produced byte-identical stdout.",
+  "The derivation is only valid under the counting-convention verdict above.",
+  "Subprocess walls include Python interpreter startup plus adapter cell-packaging; the in-process Python rate excludes them.",
+  "The largest control is where the cell-dump engine diverges (see summary.json), so no rate is derived from it."
+ ]
+}

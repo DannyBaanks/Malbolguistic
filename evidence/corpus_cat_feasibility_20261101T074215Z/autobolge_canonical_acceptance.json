@@ -1,0 +1,65 @@
+[
+ {
+  "path": "ext/linguist/linguist.h",
+  "envelope_chars": 72,
+  "data_cells": 216,
+  "program_bytes": 3532,
+  "synthesis_ms": 0.11,
+  "sha256": "8e85c3a25bf7f43e2c249dfc4e8566bfd3cfd742894f32efb507c6049ec86f6e",
+  "loader_illegal_cells": 357,
+  "engines": {
+   "mb_ref": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "INVALID_OPCODE: cell 1"
+   },
+   "olmstead": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "invalid character in source file"
+   }
+  }
+ },
+ {
+  "path": "samples/Hurl/capture-data.hurl",
+  "envelope_chars": 412,
+  "data_cells": 1236,
+  "program_bytes": 4552,
+  "synthesis_ms": 0.3,
+  "sha256": "93e22cd7ea672e38ffc4b76b1cbe5b01dec61059786050d3130c5ab297ee1c4f",
+  "loader_illegal_cells": 1922,
+  "engines": {
+   "mb_ref": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "INVALID_OPCODE: cell 1"
+   },
+   "olmstead": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "invalid character in source file"
+   }
+  }
+ },
+ {
+  "path": "samples/NMODL/fornetcon.mod",
+  "envelope_chars": 1064,
+  "data_cells": 3192,
+  "program_bytes": 6508,
+  "synthesis_ms": 0.86,
+  "sha256": "043dd57dedacd13cff399ae182e3e6781e8e97cde26f9aa07fc161e85f6f862b",
+  "loader_illegal_cells": 4950,
+  "engines": {
+   "mb_ref": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "INVALID_OPCODE: cell 1"
+   },
+   "olmstead": {
+    "rc": 1,
+    "stdout_is_envelope": false,
+    "stderr": "invalid character in source file"
+   }
+  }
+ }
+]

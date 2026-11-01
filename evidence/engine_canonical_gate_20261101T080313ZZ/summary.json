@@ -1,0 +1,44 @@
+{
+ "artifacts_under_test": 379,
+ "elapsed_s": 31.9,
+ "oracle_pins": {
+  "mb_ref.c": "a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3",
+  "olmstead_original.c": "05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510"
+ },
+ "engines": {
+  "oracle_mb_ref": {
+   "halt": 379,
+   "envelope_exact": 379,
+   "agree_both_oracles": 0,
+   "failed_count": 0,
+   "first_failures": []
+  },
+  "oracle_olmstead": {
+   "halt": 379,
+   "envelope_exact": 379,
+   "agree_both_oracles": 0,
+   "failed_count": 0,
+   "first_failures": []
+  },
+  "zig_bolg1": {
+   "halt": 379,
+   "envelope_exact": 379,
+   "agree_both_oracles": 379,
+   "failed_count": 0,
+   "first_failures": []
+  },
+  "toolkit_python": {
+   "halt": 379,
+   "envelope_exact": 379,
+   "agree_both_oracles": 379,
+   "failed_count": 0,
+   "first_failures": []
+  }
+ },
+ "verdicts": {
+  "oracle_mb_ref": "CONTROL",
+  "oracle_olmstead": "CONTROL",
+  "zig_bolg1": "CANONICAL_AGREEMENT",
+  "toolkit_python": "CANONICAL_AGREEMENT"
+ }
+}
