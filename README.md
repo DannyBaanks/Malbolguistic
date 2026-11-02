@@ -17,19 +17,21 @@ Malbolge-Translator  (vendored bajo vendor/malbolge_translator/)
         ↓
 Nivel 1: mirror/<path>.malrt1     (envoltura MALRT1, cada archivo de texto, codec-verificado)
 Nivel 2: malbolge/<path>.mal      (programas REALES de Malbolge, ejecutados, verificados)
+Nivel 3: vendor/cat/cat_compact.mal (UN solo programa; cada archivo entra por stdin y
+          sale por stdout byte-exacto — no hay traduccion por archivo)
         ↓
 traduccion reversa (decode + ejecucion)
         ↓
 paridad SHA-256 contra los bytes originales
 ```
 
-## Dos niveles, sin falsos
+## Tres niveles, sin falsos
 
 | Nivel | Alcance | Artifact | Reclamo |
 |---|---|---|---|
 | 1 — Codec mirror | **cada** archivo TEXT | `mirror/**/*.malrt1` | `CODEC_MIRROR_PARITY`: bytes fuente → MALRT1 → decode → SHA-256 identico |
 | 2 — Malbolge real | archivos TEXT ≤ 1.024 B (frontera movida a d5 del port a Zig), bajo presupuesto de wall-clock | `malbolge/**/*.mal` | `FULL_EXECUTED_ROUNDTRIP`: fuente → Malbolge puro sintetizado → ejecucion canonica → decode → SHA-256 identico |
-| 3 — Cat canónico | **todos** los archivos TEXT del catálogo | `vendor/cat/cat_compact.mal` (un solo programa) | `CONTRACT_LEVEL3_CANONICAL_CAT`: el archivo entra por stdin y el programa imprime sus bytes exactos — **no** incorpora el archivo al programa |
+| 3 — Cat canónico | **todos** los archivos del catálogo: 4.258 TEXT **y** las 20 BINARY (4.278 en total; sólo los 3 `SYMLINK` no existen en el snapshot) | `vendor/cat/cat_compact.mal` (un solo programa) | `CONTRACT_LEVEL3_CANONICAL_CAT`: el archivo entra por stdin y el programa imprime sus bytes exactos — **no** incorpora el archivo al programa |
 
 CODEC ROUNDTRIP ≠ FULL MALBOLGE E2E PARA ARCHIVOS ARBITRARiAMENTE GRANDES.
 El costo de sintesis del nivel 2 **no es una ley por byte**. El "~0.7 s por byte
@@ -80,14 +82,15 @@ programa Malbolge. Solo los archivos bajo `malbolge/` son Malbolge ejecutable.
 |---|---|
 | Archivos fuente (incl. 3 symlinks registrados) | 4,281 |
 | Archivos de texto mirror-eados (nivel 1) | 4,258 / 4,258 (paridad codec, 0 desajustes) |
-| Archivos binarios saltados | 20 |
+| Archivos binarios saltados | 20 (sin programa propio; **sí** reproducidos byte a byte por el nivel 3) |
 | **Programas reales de Malbolge sintetizados + ejecutados (nivel 2)** | **1.605 / 4.258 textos (379 ≤128 B por el generator + 1.226 hasta 1.022 B por el port a Zig), 0 fallos** |
 | Bytes de texto originales | 31,647,823 |
 | Bytes de texto cubiertos por nivel 2 | 662,412 |
 | Bytes de envoltura mirror (`mirror/`) | 42,509,444 (×1.34) |
 | Bytes de programa real de Malbolge (`malbolge/`) | 23,944,625 |
 | Ratio de expansion (nivel 2) | min ×20.57 · mediana ×24.24 · max ×462.75 |
-| **Nivel 3 — Cat canónico sobre el catálogo entero** | **4.258 / 4.258 archivos, 31,647,823 bytes, byte-exactos bajo ambos oráculos** |
+| **Nivel 3 — Cat canónico sobre el catálogo entero** | **4.258 / 4.258 archivos TEXT, 31,647,823 bytes, byte-exactos bajo ambos oráculos** |
+| **Nivel 3 ampliado — también las 20 BINARY, y esas bytes clasificadas por linguist** | **4.278 / 4.278 archivos, 32,945,606 bytes**, 0 fallos · 4.235 con idioma al frente · **770 idiomas distintos** · Malbolge = `NIL` |
 
 Detalles completos: `evidence/metrics.json`, `evidence/roundtrip.json`,
 `evidence/VERDICTS.md` (tabla de claims) y su anexo de correcciones
@@ -139,6 +142,7 @@ python3 tools/build_malboguistic.py --level1-only  # solo codec mirror + adopcio
 python3 tools/verify_corpus.py                     # re-verifica el nivel 2 SIN generator (oraculos C)
 python3 tools/verify_level3.py                     # nivel 3: el catalogo entero por stdin contra el Cat
 python3 tools/verify_linguist_pipeline.py           # nivel 2 ejecutado -> decodificado -> clasificado por linguist
+python3 tools/verify_linguist_pipeline.py --level 3 --include-non-text  # catalogo entero por el Cat -> clasificado
 python3 tools/level1_determinism.py --evidence evidence/level1_determinism_<UTC>/
 python3 tools/extend_level2_zig.py --evidence evidence/level2_zig_extend_<UTC>/ \
     --cap-bytes 1024 --depth 5 --apply-manifest   # mueve la frontera del nivel 2
@@ -206,8 +210,12 @@ Ultima corrida sellada (2026-11-01, Linux): **4.258/4.258 exactos** bajo `mb_ref
 
 Lo que el nivel 3 **no** es: no mete los bytes del archivo dentro del programa, así que no
 hay traducción por archivo ni árbol `malbolge/` comparable. Es un contrato distinto, no un
-nivel 2 mas grande, y no sustituye a las filas de nivel 2 del manifest. Scope: las entradas
-`TEXT` del catálogo; las 20 `BINARY` y 3 `SYMLINK` quedan fuera de la corrida.
+nivel 2 mas grande, y no sustituye a las filas de nivel 2 del manifest. Scope de
+`tools/verify_level3.py`: las 4.258 entradas `TEXT`. Las 20 `BINARY` **sí** están
+reproducidas byte a byte, pero por la otra variante del mismo contrato —
+`tools/verify_linguist_pipeline.py --level 3 --include-non-text`, 4.278/4.278 y 32.945.606
+bytes (sección más abajo)—, no por ese script; y las 3 `SYMLINK` no existen en el snapshot
+vendido, así que no tiene dónde ejecutarse.
 
 Esto re-verifica **ejecución** y **integridad del snapshot**. La **síntesis** sigue
 necesitando `malbolge-generator`, que no está en PyPI: se instala desde la copia local
@@ -218,15 +226,19 @@ fuente → `.mal` → oráculos canónicos → SHA-256 ya vuelve a cerrar en Lin
 
 ## El corpus devuelto por los `.mal`, clasificado por el linguist del propio snapshot
 
-`tools/verify_linguist_pipeline.py` cierra el círculo sobre la población `PASS` del
-manifest: ejecuta cada archivo `.mal` commiteado bajo los dos oráculos fijados por
-SHA-256, decodifica la envoltura MALRT1 con el codec del repo, y pasa los bytes a
+`tools/verify_linguist_pipeline.py` cierra el círculo sobre dos poblaciones, según la
+bandera `--level`. Con `--level 2` (el default) toma la población `PASS` del manifest:
+ejecuta cada archivo `.mal` commiteado bajo los dos oráculos fijados por SHA-256,
+decodifica la envoltura MALRT1 con el codec del repo, y pasa los bytes a
 **la copia de linguist que está dentro del snapshot** (`vendor/source_snapshot`,
 versión 9.7.0), no a la gema publicada. Cada archivo se clasifica en seis variantes
 (`source`, `source_repeat`, `from_mal`, `envelope`, `malprog`, `empty`), todas con el
 **mismo path lógico** salvo `malprog`, de modo que la única variable sea el contenido.
+Con `--level 3` el contrato cambia a `CONTRACT_CAT_FED` y la población también —ver
+«Extensión» más abajo—: el archivo entra por stdin del Cat canónico y se clasifica lo que
+sale por stdout.
 
-Corrida sellada (2026-11-02 UTC, Linux; 7,4 s de ejecución + 10,1 s de clasificación):
+Corrida sellada del nivel 2 (2026-11-02 UTC, Linux; 7,4 s de ejecución + 10,1 s de clasificación):
 
 | afirmación | medido |
 |---|---|
@@ -265,9 +277,12 @@ python3 tools/verify_linguist_pipeline.py --limit 40 --evidence /tmp/smoke   # h
 python3 tools/verify_linguist_pipeline.py                                    # barrido completo
 ```
 
-Cuatro corridas completas independientes: **0** diferencias en clasificaciones y **0** en
-checks entre ellas; lo único que cambia son los `wall_ms` de los motores. La DB del
-clasificador es byte-estable entre dos generaciones (`sha256` `e6922461…`, 5.871.252 B).
+Cuatro corridas completas independientes del nivel 2: **0** diferencias en clasificaciones
+y **0** en checks entre ellas; lo único que cambia son los `wall_ms` de los motores. En
+nivel 3 las dos corridas dan las mismas 4.278 filas ignorando tiempos, pero la reemplazada
+vivió fuera del repo (`/tmp/malpipe/pack_level3_render_045845Z`), así que ese control está
+**documentado** en el anexo, no verificable desde el pack commiteado. La DB
+del clasificador es byte-estable entre dos generaciones (`sha256` `e6922461…`, 5.871.252 B).
 
 El pack **no puede contener rutas del host**: `jobs.jsonl` se tokeniza (`{SNAPSHOT}`,
 `{STAGE}`, `{REPO}`, `{MIRROR}`, `{MALBOLGE}`, `{WORKDIR}`) y la copia absoluta queda en el
@@ -443,8 +458,10 @@ evidence/<tema>_<UTC>/       packs de evidencia sellados, uno por corrida (nunca
 tools/build_malboguistic.py  el build reproducible de un comando (nivel 1 + nivel 2)
 tools/verify_corpus.py       re-verificacion canónica del corpus + inventario completo
 tools/verify_level3.py       nivel 3: catalogo completo por stdin contra el Cat canónico
-tools/verify_linguist_pipeline.py  nivel 2 ejecutado -> decodificado -> clasificado por el
-                             linguist del snapshot (worker Ruby en tools/gate_adapters/)
+tools/verify_linguist_pipeline.py  dos rutas sobre el mismo linguist del snapshot:
+                             --level 2 (ejecutado -> decodificado -> clasificado) y
+                             --level 3 --include-non-text (catalogo entero por el Cat);
+                             worker Ruby en tools/gate_adapters/
 tools/extend_level2_zig.py   mueve la frontera del nivel 2 con el port a Zig
 tools/engine_gate.py         gate de semantica multi-engine (adapters bajo tools/gate_adapters/)
 tools/mbsearch_gate.py       gate del port a Zig (corpus / determinismo / diferencial)
