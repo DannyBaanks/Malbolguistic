@@ -1,0 +1,36 @@
+{
+  "run_utc": "2026-11-01T22:30:48Z",
+  "tool": "tools/extend_level2_zig.py",
+  "mode": "apply",
+  "cap_bytes": 1024,
+  "depth": 5,
+  "seed": 42,
+  "candidates": 1226,
+  "passed": 1226,
+  "failed": 0,
+  "wall_s": 933.5,
+  "zig_pins": {
+    "zig_version": "0.16.0",
+    "mbc.zig": {
+      "source_sha256": "1fead7d75f4905780db9bedfbdae614aa049e9d46dfa3fc2333f91409cca11f9",
+      "binary_sha256": "7e4479a8f47d6fef52bb1a071db2986a480601d0a98825c8c27298ead2c4aef8"
+    },
+    "mbsearch.zig": {
+      "source_sha256": "b99e5e9100746b8b96819cd1efe4f8a8e76d4fb55f81e7dbb28ee02d9f4a290b",
+      "binary_sha256": "e986891aff437a3631f23a4ceadb0a0f514aff26045b04b223fdbd2c4f29cc15"
+    }
+  },
+  "oracle_pins": {
+    "mb_ref.c": "a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3",
+    "olmstead_original.c": "05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510"
+  },
+  "program_chars_total": 22523253,
+  "evaluations_total": 1173971071,
+  "median_search_wall_s": 0.579,
+  "lineage": "zig_port",
+  "failure_reasons": [],
+  "not_claimed": [
+    "byte-identity with the generator-made corpus: the port is a second lineage (0/379 identical, zig_search_port_gate_20261101T204229ZZ/)",
+    "reproducibility of the generator path: level 2 synthesis is not byte-reproducible"
+  ]
+}

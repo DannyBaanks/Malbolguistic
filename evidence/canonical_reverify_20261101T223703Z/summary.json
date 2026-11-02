@@ -1,0 +1,44 @@
+{
+ "run_utc": "20261101T223703Z",
+ "inventory": {
+  "entries": 4281,
+  "symlinks_exempt": 3,
+  "sha_mismatch": [],
+  "missing": []
+ },
+ "environment": {
+  "system": "Linux",
+  "release": "7.0.0-42-generic",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cpu_count": 12
+ },
+ "oracle_pins": {
+  "mb_ref.c": "a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3",
+  "olmstead_original.c": "05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510"
+ },
+ "engines": [
+  "mb_ref",
+  "olmstead_1998"
+ ],
+ "max_steps": 500000000,
+ "artifacts": 1605,
+ "passed": 1605,
+ "failed": 0,
+ "wall_seconds": 6.27,
+ "engine_wall_ms_mean": 1.8,
+ "engine_wall_ms_max": 7.6,
+ "chain": {
+  "artifact_sha_matches_manifest": 1605,
+  "envelope_sha_matches_manifest": 1605,
+  "envelope_self_consistent": 1605,
+  "snapshot_matches_envelope": 1605,
+  "mb_ref_halt": 1605,
+  "olmstead_1998_halt": 1605,
+  "mb_ref_output_is_envelope": 1605,
+  "olmstead_1998_output_is_envelope": 1605,
+  "differential_engines_agree": 1605
+ },
+ "failures": []
+}
