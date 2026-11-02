@@ -1,0 +1,43 @@
+{
+ "run_utc": "20261101T223138Z",
+ "contract": "CONTRACT_CAT_FED",
+ "level": 3,
+ "snapshot_commit": "befd3af35e70150b76458085208435eef9286bb3",
+ "cat": {
+  "artifact": "vendor/cat/cat_compact.mal",
+  "sha256": "dd8f9b106dd4b25cf190a2fa1cf7f1b03db08d2cb30d4144f8791d46a347079b",
+  "bytes": 7596,
+  "pinned": true
+ },
+ "engines": [
+  "mb_ref",
+  "olmstead"
+ ],
+ "oracle_pins": {
+  "mb_ref.c": "a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3",
+  "olmstead_original.c": "05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510"
+ },
+ "mb_ref_step_budget": 300000000,
+ "per_process_timeout_s": 600.0,
+ "inventory_text_entries": 4258,
+ "files_in_scope": 4258,
+ "files_measured": 4258,
+ "bytes_covered": 31647823,
+ "exact_by_engine": {
+  "mb_ref": 4258,
+  "olmstead": 4258
+ },
+ "engines_agree": 4258,
+ "inventory_sha_mismatch": 0,
+ "missing_from_snapshot": 0,
+ "failures": [],
+ "environment": {
+  "system": "Linux",
+  "release": "7.0.0-42-generic",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cpu_count": 12
+ },
+ "wall_seconds": 82.11
+}

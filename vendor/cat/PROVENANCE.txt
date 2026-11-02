@@ -1,0 +1,31 @@
+# CAT SOURCE — procedencia del copiador universal del nivel 3
+
+`cat_compact.mal` es THIRD PARTY de un repo hermano (BolgeForge), no código generado por
+MALBOGUISTIC. Se vendoriza para que `tools/verify_level3.py` no dependa de rutas de un
+host ni de que el repo hermano esté presente.
+
+## cat_compact.mal
+- sha256: dd8f9b106dd4b25cf190a2fa1cf7f1b03db08d2cb30d4144f8791d46a347079b
+- bytes: 7596 (7596 celdas, sin whitespace)
+- origen: repo BolgeForge, ruta artifacts/cat_compact.mal
+- commit BolgeForge: 7b4fbacf2d7d58cdfadd83a48af17128c2c776f6
+- licencia: MIT (Copyright (c) 2026 ISyCo Contributors), LICENSE del repo BolgeForge
+- CLI: `mb_ref cat_compact.mal [max_steps] < archivo > copia`; `olmstead cat_compact.mal`
+  con el archivo por stdin
+- qué hace: lee stdin byte a byte y los reimprime por stdout; termina con el centinela
+  de EOF (`in` en EOF = 59048 = 3^10 − 1 en ambos motores). No incorpora los bytes del
+  archivo dentro del programa.
+- presupuesto: 300000000 pasos de `mb_ref` son suficientes para los 31,647,823 bytes del
+  catálogo (medido en el paquete `corpus_cat_feasibility_20261101T074215Z`).
+
+## Por qué vive en vendor/, no en malbolge/
+
+El nivel 2 (`CONTRACT_SELF_CONTAINED`) verifica artefactos de `malbolge/` con stdin
+vacío. El nivel 3 (`CONTRACT_CAT_FED`) verifica UN solo programa con el archivo por
+stdin: es un contrato distinto y su artefacto no es la traducción de ningún archivo del
+catálogo, así que no entra en el manifest de nivel 2 ni en `tools/verify_corpus.py`.
+
+## Pin
+
+`tools/verify_level3.py` rechaza ejecutar si el byte del vendorizado no coincide con el
+sha256 de arriba. Un byte distinto es otro programa, no este.
