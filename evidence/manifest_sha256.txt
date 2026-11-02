@@ -1,1 +1,1 @@
-64b4a2a966947b50281b71a71ac016be0467e0d411aeb595c498a830c2372901  manifest/translation_manifest.json
+54c4b70421eddaf13d0739c354651c5d1f64f6f2a40bdcb67466bad4b4c550d7  manifest/translation_manifest.json

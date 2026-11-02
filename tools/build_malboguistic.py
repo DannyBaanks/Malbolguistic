@@ -226,6 +226,110 @@ def level2_synthesize(path_rel: str, src_sha: str, max_steps: int,
 
 
 # ---------------------------------------------------------------------------
+# Committed corpus & sealed level 3
+# ---------------------------------------------------------------------------
+
+# Provenance keys the corpus tools write; a rebuild carries them through instead
+# of flattening them, so a Zig-extended entry stays distinguishable from a
+# generator-made one across builds.
+PASS_CARRY_KEYS = ("lineage", "synthesizer", "synthesizer_binary_sha256",
+                   "evaluations", "verified_by")
+
+
+def adopt_committed(text_entries: list[dict], l2_results: dict) -> set[str]:
+    """Carry over every PASS the committed manifest declares, unmodified.
+
+    Re-synthesizing a source that already has a verified .mal replaces sealed
+    bytes with different ones: the Python generator is not byte-reproducible
+    (evidence/synthesis_linux_probe_20261101/), and the Zig extension puts
+    artifacts above --e2e-max-bytes that a rebuild would otherwise demote to
+    SKIPPED_TOO_LARGE while leaving the file on disk. A PASS is carried over only
+    if its artifact still hashes to the recorded sha256 and its source is
+    unchanged; anything else falls through to normal synthesis.
+    """
+    manifest_path = MANIFEST_DIR / "translation_manifest.json"
+    if not manifest_path.exists():
+        return set()
+    try:
+        prior = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return set()
+    by_path = {e["path"]: e for e in text_entries}
+    adopted: set[str] = set()
+    for entry in prior:
+        mb = entry.get("malbolge") or {}
+        src = by_path.get(entry.get("source", ""))
+        if src is None or mb.get("status") != "PASS":
+            continue
+        art = (REPO_ROOT / str(mb.get("artifact", ""))).resolve()
+        if MALBOLGE_DIR not in art.parents or not art.is_file():
+            continue
+        if sha256_file(art) != mb.get("sha256"):
+            continue
+        if entry.get("source_sha256") != src["sha256"]:
+            continue
+        if not (MIRROR_DIR / (src["path"] + ".malrt1")).is_file():
+            continue
+        rec = {
+            "source": src["path"],
+            "level2_status": "PASS",
+            "source_bytes": src["size_bytes"],
+            "source_sha256_cached": src["sha256"],
+            "malbolge_artifact": mb["artifact"],
+            "malbolge_sha256": mb["sha256"],
+            "malbolge_chars": mb["chars"],
+            "expansion_ratio": mb["expansion_ratio"],
+            "malbolge_execution_status": mb["execution_status"],
+            "malbolge_steps": mb["steps"],
+            "end_to_end_roundtrip": mb["end_to_end_roundtrip"],
+            "codec_roundtrip": mb["codec_roundtrip"],
+            "malbolge_synthesis": mb["synthesis"],
+            "search_depth": mb.get("search_depth"),
+            "duration_s": mb.get("duration_s"),
+        }
+        for k in PASS_CARRY_KEYS:
+            if k in mb:
+                rec[k] = mb[k]
+        l2_results[src["path"]] = rec
+        adopted.add(src["path"])
+    return adopted
+
+
+def level3_sealed() -> dict:
+    """Read the newest sealed level-3 Cat sweep that covers the whole catalog."""
+    cat = REPO_ROOT / "vendor" / "cat" / "cat_compact.mal"
+    pin = "dd8f9b106dd4b25cf190a2fa1cf7f1b03db08d2cb30d4144f8791d46a347079b"
+    if not cat.is_file() or sha256_file(cat) != pin:
+        return {"claim": "NOT_SEALED: vendor/cat/cat_compact.mal missing or off-pin"}
+    packs = sorted(EVIDENCE_DIR.glob("level3_cat_sweep_*/summary.json"))
+    best = None
+    for path in packs:
+        try:
+            s = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if (s.get("contract") == "CONTRACT_CAT_FED"
+                and s.get("cat", {}).get("sha256") == pin
+                and s.get("failures") == []
+                and s.get("files_measured") == s.get("inventory_text_entries")
+                and s.get("files_measured", 0) > 0):
+            best = (path, s)
+    if best is None:
+        return {"claim": f"NOT_SEALED: no full-catalog sweep under "
+                         f"evidence/level3_cat_sweep_* ({len(packs)} pack(s))"}
+    path, s = best
+    return {
+        "claim": f"DEMONSTRATED over {s['files_measured']}/{s['inventory_text_entries']} "
+                 f"catalog TEXT files ({s['bytes_covered']} bytes) under "
+                 f"{', '.join(s['engines'])} — sealed at {path.parent.name}",
+        "evidence": str(path.parent.relative_to(REPO_ROOT)),
+        "files": s["files_measured"],
+        "bytes": s["bytes_covered"],
+        "engines": s["engines"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -249,6 +353,11 @@ def main() -> int:
                          "(fallback when the process pool misbehaves)")
     ap.add_argument("--resume", action="store_true",
                     help="reuse prior PASS/FAILED level-2 results for unchanged sources")
+    ap.add_argument("--no-adopt", dest="adopt", action="store_false",
+                    help="re-synthesize sources that already have a committed .mal; "
+                         "this replaces sealed bytes, and the generator is not "
+                         "byte-reproducible")
+    ap.set_defaults(adopt=True)
     args = ap.parse_args()
 
     t_start = time.time()
@@ -295,6 +404,11 @@ def main() -> int:
         resumed = len(l2_results)
     else:
         resumed = 0
+
+    # ---- carry over the committed corpus --------------------------------------
+    adopted = adopt_committed(text_entries, l2_results) if args.adopt else set()
+    print(f"[adopt] committed level-2 artifacts carried over: {len(adopted)} "
+          f"(not re-synthesized)", flush=True)
 
     l2_done_paths = {p for p in l2_results}
     if not args.level1_only and candidates and args.serial:
@@ -417,7 +531,7 @@ def main() -> int:
                 "source_sha256_cached": e["sha256"],
             }
     for e in text_entries:
-        if e["size_bytes"] > args.e2e_max_bytes:
+        if e["size_bytes"] > args.e2e_max_bytes and e["path"] not in adopted:
             l2_results[e["path"]] = {
                 "source": e["path"], "level2_status": "SKIPPED_TOO_LARGE",
                 "source_size_bytes": e["size_bytes"],
@@ -458,16 +572,21 @@ def main() -> int:
                 "synthesis": l2["malbolge_synthesis"],
                 "search_depth": l2.get("search_depth"),
                 "duration_s": l2["duration_s"],
+                **{k: l2[k] for k in PASS_CARRY_KEYS if k in l2},
             })
         elif l2["level2_status"] == "FAILED":
             entry["malbolge"]["error"] = l2.get("error")
         manifest.append(entry)
 
-    manifest_text = json.dumps(manifest, indent=1) + "\n"
     manifest_path = MANIFEST_DIR / "translation_manifest.json"
+    committed_manifest = (manifest_path.read_bytes() if manifest_path.exists()
+                          else None)
+    manifest_text = json.dumps(manifest, indent=1) + "\n"
     manifest_path.write_text(manifest_text, encoding="utf-8", newline="")
     # hash the bytes actually on disk (never the in-memory string)
     manifest_sha = sha256_file(manifest_path)
+    manifest_unchanged = (committed_manifest is not None
+                          and manifest_path.read_bytes() == committed_manifest)
     (EVIDENCE_DIR / "manifest_sha256.txt").write_text(
         f"{manifest_sha}  manifest/translation_manifest.json\n", encoding="utf-8")
 
@@ -508,6 +627,7 @@ def main() -> int:
     mal_bytes = sum(r["malbolge_chars"] for r in l2_pass)
     largest = sorted(l2_pass, key=lambda r: r["malbolge_chars"],
                      reverse=True)[:10]
+    l3 = level3_sealed()
     metrics = {
         "source_commit": (REPO_ROOT / "SOURCE_COMMIT.txt").read_text().strip(),
         "LINGUIST_SOURCE_FILES": len(inventory),
@@ -516,6 +636,11 @@ def main() -> int:
         "SYMLINK_FILES": len(symlinks),
         "MIRRORED_FILES_LEVEL1": len(l1_results),
         "TRANSLATED_FILES_LEVEL2_REAL_MALBOLGE": len(l2_pass),
+        "LEVEL2_ADOPTED_FROM_COMMITTED": len(adopted),
+        "LEVEL2_SYNTHESIZED_THIS_RUN": len(l2_pass) - len(adopted),
+        "LEVEL2_MAX_SOURCE_BYTES": (max(r["source_bytes"] for r in l2_pass)
+                                    if l2_pass else None),
+        "LEVEL3_CANONICAL_CAT": l3,
         "ORIGINAL_TEXT_BYTES": orig_bytes,
         "MIRROR_ENVELOPE_BYTES": mirror_bytes,
         "MIRROR_EXPANSION_RATIO": round(mirror_bytes / orig_bytes, 3) if orig_bytes else None,
@@ -553,7 +678,11 @@ def main() -> int:
         "TREE_PRESERVED": verdict(True),  # artifacts mirror source tree 1:1 by construction
         "CODEC_MASS_MIRROR": verdict(
             roundtrip["LEVEL1_CODEC_MIRRORED"] == roundtrip["FILES_TEXT"]),
-        "MASS_TRANSLATION_REAL_MALBOLGE": verdict(len(l2_pass) > 0),
+        "MASS_TRANSLATION_REAL_MALBOLGE": verdict(
+            len(candidates) > 0
+            and all(l2_results[e["path"]]["level2_status"] == "PASS"
+                    for e in candidates)
+            and len(l2_fail) == 0),
         "BYTE_EXACT_ROUNDTRIP_LEVEL1": verdict(
             roundtrip["LEVEL1_CODEC_MISMATCH"] == 0),
         "BYTE_EXACT_ROUNDTRIP_LEVEL2": verdict(
@@ -561,11 +690,38 @@ def main() -> int:
         "ZERO_MISMATCH_LEVEL1": verdict(roundtrip["LEVEL1_CODEC_MISMATCH"] == 0),
         "ZERO_FAILED_EXECUTION_LEVEL2": verdict(len(l2_fail) == 0
                                                 and len(l2_pass) > 0),
-        "REPRODUCIBLE_BUILD": verdict(True),  # single command, pinned snapshot, deterministic codec
+        # Nivel 1 es una funcion pura sin RNG y su paridad byte-exacta se mide en cada
+        # corrida. Nivel 2 NO es byte-reproducible (medido), y "build reproducible" sin
+        # decir el nivel se leia como una garantia que ninguna corrida sostiene.
+        # Lo que SI se mide aqui: si el manifest reescrito es byte-identical al que
+        # habia en disco, es decir que la corrida no movio ni un artefacto sellado.
+        "REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT": verdict(
+            roundtrip["LEVEL1_CODEC_MISMATCH"] == 0
+            and roundtrip["LEVEL1_CODEC_MIRRORED"] == roundtrip["FILES_TEXT"]),
+        "REPRODUCIBLE_BUILD_LEVEL2_SYNTHESIS": (
+            "NOT_CLAIMED: re-synthesizing a source yields a different program every "
+            "run (evidence/synthesis_linux_probe_20261101/); the Zig port is "
+            "deterministic but is a second lineage, not identical to the corpus "
+            "(zig_search_port_gate_20261101T204229ZZ/)"),
+        "REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED": (
+            f"{'DEMONSTRATED' if manifest_unchanged else 'NOT_DEMONSTRATED'}: "
+            f"this run wrote manifest/translation_manifest.json byte-identical to "
+            f"the one it started from (sha256 {manifest_sha})"
+            if args.adopt else
+            "SKIPPED: --no-adopt re-synthesizes and replaces sealed bytes"),
+        "CONTRACT_LEVEL2_SELF_CONTAINED": (
+            f"DEMONSTRATED: {len(l2_pass)} artifacts each hold their own file. "
+            f"{len(adopted)} carried over from the committed corpus (checked by "
+            f"sha256 on disk, not re-synthesized); "
+            f"{len(l2_pass) - len(adopted)} synthesized by this run. Canonical "
+            f"execution of the committed .mal FILES is tools/verify_corpus.py."),
+        "CONTRACT_LEVEL3_CANONICAL_CAT": l3["claim"],
         "LICENSE_AUDIT": verdict(
             (REPO_ROOT / "THIRD_PARTY_NOTICES.md").exists()
             and (SNAPSHOT_DIR / "LICENSE").exists()
-            and (REPO_ROOT / "vendor" / "malbolge_translator" / "LICENSE").exists()),
+            and (REPO_ROOT / "vendor" / "malbolge_translator" / "LICENSE").exists()
+            and (REPO_ROOT / "vendor" / "oracles" / "PROVENANCE.txt").exists()
+            and (REPO_ROOT / "vendor" / "cat" / "PROVENANCE.txt").exists()),
         "LINGUIST_EXECUTES_IN_MALBOLGE": "NOT_CLAIMED",
         "GENERATED_CORPUS_IS_ORGANIC_USAGE": "NO",
     }
@@ -587,7 +743,27 @@ def main() -> int:
         f"- Level 2 (real, executed Malbolge) PASS={len(l2_pass)} "
         f"FAILED={len(l2_fail)} SKIPPED_BUDGET={roundtrip['LEVEL2_SKIPPED_BUDGET']} "
         f"SKIPPED_TOO_LARGE={too_large} (cap {args.e2e_max_bytes} B, "
-        f"budget {args.e2e_budget_seconds} s; synthesis ~0.7 s per source byte on this host).",
+        f"eligible={len(candidates)}, budget {args.e2e_budget_seconds} s).",
+        "- MASS_TRANSLATION_REAL_MALBOLGE counts over the ELIGIBLE set: it is "
+        "DEMONSTRATED only when every file <= the cap PASSes, so SKIPPED_BUDGET "
+        "fails the row instead of hiding in it.",
+        f"- Committed level-2 artifacts are carried over, never re-synthesized "
+        f"(adopted={len(adopted)}). `--no-adopt` replaces sealed bytes with a fresh, "
+        f"non-reproducible synthesis. `evidence/level2_state.json` is gitignored, so "
+        f"`--resume` is host-local while adoption from the manifest works anywhere.",
+        f"- Level 3 backs the corpus with ONE program plus the file on stdin "
+        f"({l3.get('evidence', 'no sealed pack')}). It does not embed the file in "
+        f"the program, so it is a different contract from level 2, not a bigger "
+        f"level 2.",
+        "- Synthesis cost is NOT measured by this run. The historical '~0.7 s per "
+        "source byte' was one Windows host [HISTORICAL]; the Linux measurement is "
+        "~6 s fixed + ~0.16 s per byte at depth 5, "
+        "see evidence/synthesis_linux_probe_20261101/.",
+        "- Verification method matters for level 2: this build replays the "
+        "generator's in-memory opcodes for what it synthesizes here and checks only "
+        "sha256 for what it adopts. Executing the committed .mal FILES under the "
+        "pinned canonical oracles is tools/verify_corpus.py. When quoting a "
+        f"{len(l2_pass)}/{len(l2_pass)}, quote the pack that produced it.",
         "- A `.malrt1` envelope is NOT a Malbolge program.",
         "- LINGUIST_EXECUTES_IN_MALBOLGE is NOT_CLAIMED and WILL stay that way.",
         "- This corpus is GENERATED, not organic Malbolge usage.",
