@@ -1,0 +1,21 @@
+{
+  "tool": "tools/level1_determinism.py",
+  "timestamp_utc": "2026-11-01T21:47:29Z",
+  "python": "3.12.3",
+  "codec_package": "vendor/malbolge_translator/roundtrip.py (encode_roundtrip_bytes)",
+  "entries_checked": 4258,
+  "passed": 4258,
+  "failed": 0,
+  "intra_run_double_encode_identical": 4258,
+  "matches_committed_envelope": 4258,
+  "manifest_envelope_sha_mismatch": 0,
+  "manifest_source_sha_mismatch": 0,
+  "envelope_chars_total": 42509444,
+  "wall_s": 0.44,
+  "failures": [],
+  "claim_supported": "REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT",
+  "claim_not_supported": [
+    "level 2 synthesis byte-reproducibility (see evidence/synthesis_linux_probe_20261101/)",
+    "that a fresh clone rebuilds the corpus without --resume"
+  ]
+}

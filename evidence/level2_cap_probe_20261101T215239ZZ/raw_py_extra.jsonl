@@ -1,0 +1,2 @@
+{"engine": "python", "source": ".github/CODEOWNERS", "source_bytes": 96, "peak_rss_mb": 3074, "guard_mb": 3000, "guard_killed": true, "wall_s": 11.3, "rc": -9, "child": "", "stderr": "", "rss_trajectory_mb": [3, 40, 80, 122, 178, 243, 309, 382, 409, 485, 563, 645, 730, 818, 861, 886, 975, 1071, 1153, 1244, 1329, 1425, 1521, 1529]}
+{"engine": "python", "source": "<control: 'hi'>", "source_bytes": 2, "peak_rss_mb": 1408, "guard_killed": false, "wall_s": 6.0, "rc": 0, "child": "{\"chars\": 2152, \"wall_s\": 5.54, \"pass\": true, \"error\": null}", "stderr": ""}
