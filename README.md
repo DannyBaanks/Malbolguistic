@@ -116,6 +116,7 @@ propia, con un paquete de evidencia sellado por paso:
 | `tools/extend_level2_zig.py` — mover la frontera del nivel 2 de 128 B a 1.024 B con el port | **1.226 artefactos nuevos, 0 fallos**, 1.173.971.071 evaluaciones, 933 s; corpus resultante verificado 1.605/1.605 | `evidence/level2_zig_extend_20261101T221438Z/` |
 | adopción del corpus commiteado en el build (nada de resintetizar sellado) | manifest reescrito **byte-idéntico** (`54c4b704…`): 1.605 adoptados, 0 resintetizados, 1,2 s | fila `REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED` en `evidence/VERDICTS.md` |
 | `tools/verify_linguist_pipeline.py` — el corpus devuelto por los `.mal`, clasificado por el linguist del snapshot | **1.605/1.605** de acuerdo con la clasificación del original · 441 idiomas · cadena de ejecución 10/10 eslabones verdes · **Malbolge no existe para linguist: 0/1.605** | `evidence/linguist_pipeline_sweep_20261102T043612Z/` |
+| `tools/verify_linguist_pipeline.py --level 3 --include-non-text` — el catálogo **entero** por el Cat, clasificado por el mismo linguist | **4.278/4.278** byte-exactos (32.945.606 B), **incluidas las 20 BINARY** · **2.673 archivos sin `.mal` propio** alcanzados · 770 idiomas · Malbolge: NEGATIVE también para el Cat | `evidence/linguist_pipeline_level3_sweep_20261102T050208Z/` |
 
 Nada de esto requiere `malbolge-generator`, salvo el tier diferencial del port.
 
@@ -273,6 +274,57 @@ El pack **no puede contener rutas del host**: `jobs.jsonl` se tokeniza (`{SNAPSH
 workdir; antes de escribir `SHA256SUMS.txt` un tripwire recorre el directorio y, si algún
 archivo conserva el prefijo absoluto del repo o del home, se niega a sellar. Este repo es
 público, así que la fuga de rutas es tan fallo como un `FAIL` en la cadena.
+
+### Extensión: el catálogo entero por la ruta del Cat (`--level 3`)
+
+El barrido anterior sólo llegaba a los 1.605 archivos que tienen `.mal` propio. Los otros
+**2.673** (2.653 `SKIPPED_TOO_LARGE` + 20 `BINARY`) no tienen programa: la única ruta
+Malbolge que los alcanza es el Cat universal con el archivo por stdin. El mismo tool, con
+`--level 3`, cambia de contrato y de población —mismos oráculos fijados, mismo linguist del
+snapshot, mismo tripwire de rutas— y añade dos variantes: `from_cat` (lo que devuelve el Cat,
+en la misma ruta lógica) y `prefix64` (los primeros 64 bytes, misma ruta).
+
+```
+python3 tools/verify_linguist_pipeline.py --level 3 --include-non-text --rebuild-linguist
+```
+
+Medido en `evidence/linguist_pipeline_level3_sweep_20261102T050208Z/` (109,8 s de ejecución +
+24,1 s de clasificación, 21.392 blobs, exit 0):
+
+| afirmación | medido |
+|---|---|
+| cadena de 7 eslabones por archivo | **4.278/4.278**, 0 fallos (32.945.606 bytes) |
+| `BINARY_ENTRIES_REPRODUCED_BYTE_EXACT` | **20/20** — el nivel 3 nunca había barrido binarios |
+| `CATALOG_FILES_WITH_NO_OWN_PROGRAM_REACHED` | **2.673/2.673** |
+| idioma reconocido en la fuente original | 4.235/4.278 · **770 idiomas distintos** (441 en el subconjunto de nivel 2) |
+| `from_cat` coincide con `source` | 4.278/4.278, pero **sólo 4.235 con idioma al frente** |
+| control `prefix64` (64 bytes, misma ruta) | 211/4.278 cambian: 182 a otro idioma, 29 a `NIL` |
+| `cat_compact.mal` clasificado como idioma | **NEGATIVE — NIL** (pasa por el `Classifier` y devuelve nil) |
+| controles negativo y de determinismo | 4.278/4.278 los dos |
+
+Lecturas obligadas:
+
+- **El `from_cat` 4.278/4.278 es más hueco que el del nivel 2**: 43 archivos no tienen idioma
+  en ninguno de los dos lados, y en las 20 `BINARY` sólo 3 lo tienen, así que 20/20 de
+  "coincidencia" binaria son 17 `NIL == NIL`. El pack lo separa en columnas
+  (`coincide` / `coincide con idioma`) para que no se pueda citar la primera sin la segunda.
+- **`prefix64` sí es independiente de la paridad byte a byte**: compara dos contenidos
+  distintos en la misma ruta. Que sólo 211 de 4.278 cambien de veredicto al quedarse con 64
+  bytes cuantifica cuánto depende linguist de la ruta y de los primeros caracteres.
+- **Nuestra etiqueta `BINARY` no es la de linguist.** De los 20 archivos que el inventario
+  marca como binarios (regla propia: NUL o no-UTF-8), linguist considera `binary? == true`
+  en **14** (todos `bail_out` → `NIL`); en los otros **6** no: 3 reciben idioma
+  (`Altium Designer` y `Oberon` por extensión, `Roff` por heurística) y 3 caen al
+  `Classifier` y devuelven `NIL` — entre ellos los dos fixtures UTF-16, que tienen NULs
+  porque la codificación lo pide.
+- Las 3 entradas `SYMLINK` del inventario **no están en el snapshot vendido** (buscadas en
+  disco y en `git ls-files`: no existen). Constan como `[ABSENT]`, no como acuerdo.
+
+Tres controles cruzados, todos sin diferencias: las dos corridas de nivel 3 dan el mismo
+`raw.jsonl` saliendo los tiempos; sobre las 1.605 archivos comunes con el pack de nivel 2,
+0 inconsistencias entre las dos rutas (misma clasificación, los dos contratos verdes); y el
+`exact` bajo `mb_ref` y `olmstead` de los 4.258 `TEXT` coincide con el barrido del Cat
+sellado ayer por `tools/verify_level3.py`, que es otra herramienta y otro día.
 
 ## Motor canónico y búsqueda en Zig (`tools/zig_canonical/`)
 

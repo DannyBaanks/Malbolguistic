@@ -189,3 +189,85 @@ se usa la versión del snapshot); la clasificación de las 20 entradas `BINARY` 
 programa propio. El path de `repository.rb`/`rugged` queda excluido del cargador (una línea,
 con guarda que aborta si fuera otra cosa), así que la clasificación de repositorios Git enteros
 no está verificada aquí.
+
+## Extensión del barrido al catálogo entero por la ruta del Cat (append 2026-11-02 UTC)
+
+`tools/verify_linguist_pipeline.py` gana `--level 3` (contrato `CONTRACT_CAT_FED`) y
+`--include-non-text`, y con ellas dos variantes de clasificación nuevas: `prefix64` (los primeros
+64 bytes, misma ruta) y el job `@cat_program` (clasificar el propio `cat_compact.mal`). El scope
+deja de ser "los que tienen `.mal`" y pasa a ser **el catálogo completo**: 4.258 `TEXT` + 20
+`BINARY`. Pack sellado: `evidence/linguist_pipeline_level3_sweep_20261102T050208Z/`
+(9 archivos, exit 0, **109,81 s de ejecución + 24,12 s de clasificación**, 21.392 blobs).
+Presupuesto: 1.200.000.000 pasos en mb_ref y 600 s por proceso; los oráculos y el Cat van fijados
+por SHA-256 como siempre.
+
+| clave medida | valor |
+|---|---|
+| cadena de 7 eslabones por archivo | **4.278/4.278**, 0 fallos (32.945.606 bytes) |
+| `CAT_FED_BYTES_REACH_LINGUIST` | DEMONSTRATED (4.278/4.278) |
+| `CATALOG_FILES_WITH_NO_OWN_PROGRAM_REACHED` | DEMONSTRATED (**2.673/2.673**: 2.653 `SKIPPED_TOO_LARGE` + 20 `BINARY`) |
+| `BINARY_ENTRIES_REPRODUCED_BYTE_EXACT` | DEMONSTRATED (**20/20**) — el nivel 3 nunca había barrido binarios |
+| `LINGUIST_CLASSIFIES_SOURCE` (no `NIL`) | 4.235/4.278 · **770 idiomas distintos** |
+| `from_cat` coincide con `source` | 4.278/4.278, pero **sólo 4.235 con idioma al frente** |
+| control `prefix64` | 211/4.278 cambian de veredicto: 182 a otro idioma, 29 a `NIL` |
+| control negativo (blob vacío) y de determinismo | 4.278/4.278 en los dos |
+| `MALBOLGE_RECOGNIZED_BY_LINGUIST` | **NEGATIVE** — `cat_compact.mal` pasa por el `Classifier` y devuelve `NIL` |
+| tiempo de motor | media 12,62 ms; máximo 1.383,8 ms (`test/fixtures/Binary/octocat.ai`, 1.041.378 B) |
+| `samples_data.rb` | regenerado y byte-estable entre corridas (`e6922461…`, 5.871.252 B), 8,89 s |
+
+### Del `NOT_DEMONSTRATED` de arriba: qué queda cubierto y qué sigue en pie
+
+Cubierto por este pack, con evidencia commiteada:
+
+- la clasificación de las **20 entradas `BINARY`**, y
+- "cualquier cosa sobre los 2.653 `SKIPPED_TOO_LARGE`": ahora tienen una ruta Malbolge medida
+  (el Cat universal) y una clasificación medida. Lo que **no** tienen sigue siendo un programa
+  `.mal` propio —el nivel 3 no crea artefactos—, así que su cobertura no sustituye a la del
+  nivel 2 y la frase "cada archivo del catálogo tiene su programa" no autoriza a decirla.
+
+Sigue en pie, sin cambios:
+
+- que la gema publicada `github-linguist` dé los mismos veredictos (aquí sólo se usa la copia del
+  snapshot, lingüist 9.7.0);
+- los **3 `SYMLINK`**: no están en el snapshot vendido —buscados en disco y en `git ls-files`, no
+  existen— y en el pack constan `[ABSENT]`, no como acuerdo;
+- la clasificación de repositorios Git enteros (el path `repository.rb`/`rugged` sigue fuera);
+- y el costo de síntesis: esta herramienta no llama a `malbolge-generator`.
+
+### Tres controles cruzados, los tres sin diferencias
+
+1. **Dos corridas del nivel 3** (`…T045845Z` y `…T050208Z`): las 4.278 filas de `raw.jsonl` son
+   idénticas ignorando `wall_ms`, y `linguist_raw.jsonl` tiene 4.279 registros en ambas con
+   **0** diferencias como conjunto.
+2. **Contra el pack de nivel 2** sobre los 1.605 archivos comunes: **0** inconsistencias comparando
+   `language/type/group/strategy` de la fuente y de lo devuelto por el programa. Dos contratos
+   distintos (`CONTRACT_SELF_CONTAINED` y `CONTRACT_CAT_FED`) convergen en el mismo veredicto.
+3. **Contra `evidence/level3_cat_sweep_20261101T223138Z/`** (otra herramienta, otro día, sin
+   linguist en medio): el conjunto de `TEXT` exactos bajo ambos oráculos es el mismo —4.258 en
+   los dos packs, diferencia simétrica **0**.
+
+### Lecturas que no se pueden citar sueltas
+
+- **El 4.278/4.278 de `from_cat` es más hueco que el del nivel 2**: 43 archivos no tienen idioma en
+  ninguno de los dos lados y en las 20 `BINARY` sólo 3 lo tienen, así que 20/20 de "coincidencia"
+  binaria son **17 `NIL == NIL`**. El pack publica las dos columnas (`coincide` / `coincide con
+  idioma`) para que la primera no se cite sola.
+- **`prefix64` sí es independiente de la paridad byte a byte**, porque compara dos contenidos
+  distintos en la misma ruta; cuantifica cuánto del veredicto sostiene la ruta y los primeros
+  caracteres.
+- **La etiqueta `BINARY` del inventario es regla nuestra** (NUL o no-UTF-8: 16 por NUL, 4 por
+  no-UTF-8), no veredicto de linguist, que confirma `binary? == true` en **14** —los 14 de
+  `test/fixtures/Binary/`, todos por `bail_out`— y lo rechaza en los otros **6**: 3 reciben idioma
+  (`Altium Designer` y `Oberon` por extensión, `Roff` por heurística) y 3 caen al `Classifier` y
+  devuelven `NIL` (`iso8859-8-i` y los dos UTF-16, que llevan NULs porque la codificación los pide).
+
+### Manejo de evidencia de este experimento
+
+En `evidence/` queda **un solo pack** nivel 3 (`…T050208Z`). El intento anterior del mismo
+experimento, `linguist_pipeline_level3_sweep_20261102T045845Z`, se **movió** fuera del repo —no se
+borró, y es reversible con un `mv`— a `/tmp/malpipe/pack_level3_render_045845Z`. La razón es
+cosmética y hay que decirla: la tabla por tipo de entrada del `VERDICT.md` no iba precedida de una
+línea en blanco y GitHub no la renderizaba. Los datos de ambos packs son idénticos (control 1 de
+arriba), y se re-selló para que la evidencia commiteada se vea como se lee. El tripwire de rutas
+volvió a pasar: los 9 archivos del pack están sin prefijo absoluto del repo ni del home, y
+`sha256sum -c` cuadra los 9.

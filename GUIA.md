@@ -28,6 +28,7 @@ Nunca presentes un `.malrt1` como "código Malbolge".
 | `python3 tools/verify_corpus.py` | **re-verifica los 1.605 `.mal` ejecutando el archivo** bajo mb_ref + Olmstead 1998; no necesita `malbolge-generator` | ~6 s |
 | `python3 tools/verify_level3.py` | nivel 3: pasa los 4.258 textos del catálogo por stdin al Cat canónico (`vendor/cat/cat_compact.mal`) bajo ambos oráculos; vende el pin del Cat y de los motores | ~82 s |
 | `python3 tools/verify_linguist_pipeline.py` | barrido nivel 2 → oráculos → decode → **clasificación con el linguist del snapshot** (6 variantes por archivo, 9.630 blobs); construye el runtime Ruby en `/tmp`, nunca en el repo | 17,5 s (7,4 s ejecución + 10,1 s clasificación) en 1.605 archivos; +7,4 s si regenera la DB |
+| `python3 tools/verify_linguist_pipeline.py --level 3 --include-non-text` | el mismo barrido sobre **el catálogo entero** (4.278 archivos, 21.392 blobs) por la ruta del Cat canónico: los bytes salen del `cat_compact.mal`, no del artefacto | 2 min 24 s (109,8 s ejecución + 24,1 s clasificación); sin `--include-non-text` el scope son los 4.258 `TEXT` y el tiempo no está medido aparte |
 | `python3 tools/extend_level2_zig.py --evidence evidence/… --cap-bytes 1024 --depth 5 --apply-manifest` | sube la frontera del nivel 2 con el port a Zig: sintetiza, verifica con ambos oráculos y solo entonces escribe `malbolge/` + manifest. Sin `--apply-manifest` no toca el repo | ~15 min para 1.226 archivos |
 | `python3 tools/mbsearch_gate.py --mode all --limit 12 --depth 5 --site-packages DIR` | gate del port a Zig (`tools/zig_canonical/mbsearch.zig`): canonicidad con `mbc`, determinismo e igualdad textual con la referencia | ~1 min |
 | `python3 tools/mbsearch_gate.py --mode corpus --limit 0 --depth 5` | los 379 objetivos del manifest con el port en Zig (construye `mbsearch`+`mbc` él solo) | ~1 min |
@@ -75,11 +76,32 @@ Salida exitosa termina con `[done] manifest_sha256=...` y exit 0.
   mismos bytes que `source`, así que el acuerdo está *implicado* por la paridad byte a
   byte. Al citar el barrido de linguist, la evidencia de fidelidad es el eslabón
   `decoded_matches_snapshot`; la clasificación sólo dice que el harness no se rompió.
-- **linguist no conoce Malbolge: 0/1.605.** `languages.yml` del snapshot (9.7.0) no tiene
-  ninguna entrada Malbolge, así que ningún resultado de
+- **linguist no conoce Malbolge: 0/1.605 en nivel 2 y 0/4.278 en nivel 3.** `languages.yml`
+  del snapshot (9.7.0) no tiene ninguna entrada Malbolge, así que ningún resultado de
   `tools/verify_linguist_pipeline.py` autoriza a decir que "linguist reconoce los `.mal`".
-  Dato aparte y más incómodo: la envoltura MALRT1 sin decodificar pasa por el archivo
-  original en 1.244 de 1.605 casos, porque linguist decide por la ruta primero.
+  En nivel 3 el veredicto se mide además sobre el propio `cat_compact.mal` (job `@cat_program`
+  del pack): pasa por el `Classifier` y devuelve `NIL`. Dato aparte y más incómodo: la
+  envoltura MALRT1 sin decodificar pasa por el archivo original en 1.244 de 1.605 casos,
+  porque linguist decide por la ruta primero.
+- **`--level 3` pide otro presupuesto que `--level 2`.** Si no pasas `--max-steps`, la
+  herramienta arranca en **1.200.000.000** de pasos (nivel 2: 100.000.000) y eleva el timeout
+  por proceso a **600 s**. Son techo de seguridad, no necesidad medida: el Cat tarda muchísimo
+  más pasos que un artefacto autocontenido porque recorre la cinta por cada byte de stdin, y
+  el pack no registra los pasos consumidos, así que no se puede bajar el techo "a ver si cabe"
+  —si mb_ref se agota imprime `MAX_STEPS: N (HALT not reached)` y sale 2, y el pack sale con
+  fallos. Margen real medido sobre los 4.278 archivos: **12,62 ms de media** y **1.383,8 ms**
+  en el peor (`test/fixtures/Binary/octocat.ai`, 1.041.378 B), los dos motores llegan a `HALT`.
+- **En nivel 3 la columna que se cita es `coincide con idioma`, no `from_cat`.** Da
+  4.278/4.278, pero 43 archivos no tienen idioma en ninguno de los dos lados y en las 20
+  `BINARY` sólo 3 lo tienen: 20/20 de "coincidencia" binaria son 17 `NIL == NIL`, que no
+  dice nada. El control que sí es independiente de la paridad byte a byte es `prefix64`
+  (64 bytes, misma ruta): 211/4.278 cambian de veredicto — 182 a otro idioma, 29 a `NIL`.
+- **La etiqueta `BINARY` del inventario es regla nuestra, no veredicto de linguist.**
+  `build_malboguistic.py` llama `BINARY` a "contiene NUL" o "no es UTF-8 válido". De los 20
+  archivos así marcados, linguist confirma `binary? == true` en **14** (todos `bail_out`) y
+  en los otros **6** no: 3 reciben idioma y 3 caen al `Classifier` y devuelven `NIL` — entre
+  ellos los fixtures UTF-16, que llevan NULs porque la codificación los pide. No uses la
+  columna `classification` como si la hubiera producido el clasificador.
 - **El barrido de linguist necesita Ruby y cae cerrado si faltan gemas.** Pide
   `charlock_holmes` y `mini_mime` (`gem install --user-install charlock_holmes mini_mime`)
   y **no instala nada por su cuenta**. El runtime (`linguist.so` + `samples_data.rb`) se
