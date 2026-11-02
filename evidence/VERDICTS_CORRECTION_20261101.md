@@ -40,5 +40,78 @@ la máquina Windows del 2026-09-04 ⇒ `[HISTORICAL]`. Medido en Linux (2026-11-
 21,2 s para 96 B), sin medir por encima de 128 B de fuente. Para el port: **63 s de pared
 para los 379 objetivos** (envolturas de 72 a 244 caracteres).
 
+## Resolución de los dos renglones (append 2026-11-01, misma sesión)
+
+`tools/build_malboguistic.py` ya no emite `REPRODUCIBLE_BUILD` a secas ni
+`MASS_TRANSLATION_REAL_MALBOLGE` con `len(l2_pass) > 0`. Los renglones ahora son:
+
+| clave | cómo se evalúa |
+|---|---|
+| `REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT` | `LEVEL1_CODEC_MISMATCH == 0 and LEVEL1_CODEC_MIRRORED == FILES_TEXT`, medida en cada corrida |
+| `REPRODUCIBLE_BUILD_LEVEL2_BYTE_EXACT` | literal `NOT_CLAIMED`, apuntando a `evidence/synthesis_linux_probe_20261101/` |
+| `MASS_TRANSLATION_REAL_MALBOLGE` | `len(candidates) > 0 and len(l2_pass) == len(candidates) and len(l2_fail) == 0` sobre el **conjunto elegible**: si un archivo elegible se va por presupuesto, el renglón cae |
+
+Aviso de cadena de evidencia: el `evidence/VERDICTS.md` commiteado es la tabla **generada el
+2026-09-04** y sigue diciendo `REPRODUCIBLE_BUILD = DEMONSTRATED`. No se regeneró a mano
+(es salida del build); queda corregida por este anexo, y el renglón viejo debe leerse como
+`[HISTORICAL]`.
+
+Además el nivel 1 dejó de ser una afirmación de prose: `tools/level1_determinism.py` mide
+doble codificación + igualdad byte a byte contra la envoltura commiteada sobre las
+**4.258/4.258** fuentes TEXT, en 0,44 s (`level1_determinism_20261101T214729ZZ/`, exit 0).
+Ese es el respaldo empírico de `REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT`; el nivel 2 sigue sin
+respaldo de reproducibilidad, y así lo dice la clave.
+
 `LINGUIST_EXECUTES_IN_MALBOLGE = NOT_CLAIMED` y
 `GENERATED_CORPUS_IS_ORGANIC_USAGE = NO` siguen vigentes sin cambio.
+
+## Tercer append (2026-11-01, misma sesión): la tabla generada ya es vigente y hay 3 claves nuevas
+
+El apartado anterior se escribió contra la tabla **generada el 2026-09-04** (commiteada en
+`9f46b0a`). `tools/build_malboguistic.py --level1-only` la regeneró el 2026-11-01, así que
+dos cosas de ahí quedan obsoletas y se corrigen sin borrarlas:
+
+1. El «Aviso de cadena» («`evidence/VERDICTS.md` sigue diciendo `REPRODUCIBLE_BUILD =
+   DEMONSTRATED`») ya no aplica al archivo actual: esa clave **no existe** en la tabla de
+   hoy. La tabla del 2026-09-04 sigue tal cual en el historial de git y ese renglón vale
+   allí como `[HISTORICAL]`.
+2. La clave `REPRODUCIBLE_BUILD_LEVEL2_BYTE_EXACT` se dividió en dos, porque mezclar
+   «la síntesis es reproducible» con «el corpus commiteado no cambia» fue el error que se
+   quiso corregir:
+
+| clave (hoy) | cómo se evalúa | estado |
+|---|---|---|
+| `REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT` | `LEVEL1_CODEC_MISMATCH == 0 and LEVEL1_CODEC_MIRRORED == FILES_TEXT` | DEMONSTRATED, medida en cada corrida |
+| `REPRODUCIBLE_BUILD_LEVEL2_SYNTHESIS` | literal `NOT_CLAIMED`, con las dos puntas de evidencia (`synthesis_linux_probe_20261101/` y `zig_search_port_gate_20261101T204229ZZ/`) | NOT_CLAIMED |
+| `REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED` | comparación real: el manifest que la corrida escribe vs el que había en disco antes de escribirla | DEMONSTRATED — `54c4b704…` byte-idéntico, 1.605 adoptados, 0 resintetizados, 1,2 s |
+| `MASS_TRANSLATION_REAL_MALBOLGE` | `len(candidates) > 0 and all(candidate PASS) and len(l2_fail) == 0` — la forma vieja (`len(l2_pass) == len(candidates)`) se rompió al haber PASS por encima del tope, así que se cambió por el predicado que dice lo que siempre quiso decir | DEMONSTRATED |
+
+Lo que **no** cambió: `MASS_TRANSLATION_REAL_MALBOLGE` mide sobre el conjunto elegible del
+build (`--e2e-max-bytes`, default 128 B, generator Python). Que hoy haya 1.605 artefactos
+no es mérito de esa corrida: 1.226 vinieron de `tools/extend_level2_zig.py` y se
+re-verifican con `tools/verify_corpus.py` (**1.605/1.605**,
+`evidence/canonical_reverify_20261101T223703Z/`).
+
+## El contrato del corpus, por escrito (append 2026-11-01)
+
+`CONTRACT_CAT_FED` estaba en esta casa como «demonstrated como factibilidad, no adoptado».
+Hoy está adoptado como **nivel 3**, con el artefacto vendorizado y fijado por SHA-256
+(`vendor/cat/cat_compact.mal`, `dd8f9b10…`) y su propia corrida sellada por
+`tools/verify_level3.py`: **4.258/4.258 byte-exactos** bajo `mb_ref` y `olmstead`,
+31.647.823 bytes, 82,1 s — `evidence/level3_cat_sweep_20261101T223138Z/`. Los tres
+contratos conviven y no son graduaciones del mismo:
+
+| nivel | quién holds los bytes | cobertura |
+|---|---|---|
+| 1 | la envoltura `mirror/*.malrt1` (codec, no Malbolge) | 4.258/4.258 TEXT |
+| 2 | el programa `.mal` (`CONTRACT_SELF_CONTAINED`) | 1.605/4.258, hasta 1.022 B de fuente |
+| 3 | stdin + un solo `cat_compact.mal` (`CONTRACT_CAT_FED`) | 4.258/4.258 TEXT |
+
+El tope del nivel 2 no es una elección de presupuesto: un artefacto cabe o no en la cinta
+canónica de 59.049 celdas, y con `depth 5` eso corta ~1.830 B de fuente
+(`evidence/level2_cap_probe_20261101T215239ZZ/`). El nivel 3 cubre el resto cambiando de
+contrato, no forzando el tope.
+
+Cerrado también el hueco del snapshot: `test/fixtures/Binary/linguist.gem` está en git
+desde hoy con `git add -f` (decisión de la host, sha `55f5f0b5…` == la del inventario). El
+`.gitignore` vendorizado no se tocó.

@@ -28,25 +28,48 @@ paridad SHA-256 contra los bytes originales
 | Nivel | Alcance | Artifact | Reclamo |
 |---|---|---|---|
 | 1 — Codec mirror | **cada** archivo TEXT | `mirror/**/*.malrt1` | `CODEC_MIRROR_PARITY`: bytes fuente → MALRT1 → decode → SHA-256 identico |
-| 2 — Malbolge real | archivos TEXT ≤ N bytes, bajo presupuesto de wall-clock | `malbolge/**/*.mal` | `FULL_EXECUTED_ROUNDTRIP`: fuente → Malbolge puro sintetizado → ejecucion canonica → decode → SHA-256 identico |
+| 2 — Malbolge real | archivos TEXT ≤ 1.024 B (frontera movida a d5 del port a Zig), bajo presupuesto de wall-clock | `malbolge/**/*.mal` | `FULL_EXECUTED_ROUNDTRIP`: fuente → Malbolge puro sintetizado → ejecucion canonica → decode → SHA-256 identico |
+| 3 — Cat canónico | **todos** los archivos TEXT del catálogo | `vendor/cat/cat_compact.mal` (un solo programa) | `CONTRACT_LEVEL3_CANONICAL_CAT`: el archivo entra por stdin y el programa imprime sus bytes exactos — **no** incorpora el archivo al programa |
 
 CODEC ROUNDTRIP ≠ FULL MALBOLGE E2E PARA ARCHIVOS ARBITRARiAMENTE GRANDES.
 El costo de sintesis del nivel 2 **no es una ley por byte**. El "~0.7 s por byte
 fuente" era de la maquina Windows de 2026-09-04 ⇒ `[HISTORICAL]`. Medido en Linux
 (2026-11-01, profundidad 5, un proceso por archivo, `evidence/synthesis_linux_probe_20261101/`):
-**~6 s fijos + ~0.16 s por byte**, o sea 5.7 s para 4 B y 21.2 s para 96 B. Mas alla de
-128 B de fuente no esta medido por ese camino.
+**~6 s fijos + ~0.16 s por byte**, o sea 5.7 s para 4 B y 21.2 s para 96 B. Ese numero es
+de muro y **no dice nada de memoria**: la misma llamada, remedida con guarda
+(`evidence/level2_cap_probe_20261101T215239ZZ/`), pide **>3 GB para un archivo de 96 B** y
+**>5.5 GB para uno de 97 B**, y el control de 2 B ya se para en ~1.2-1.4 GB. Por eso el
+generador Python no es via para extender el corpus en este host.
+El port a Zig si lo es, y es el mismo trabajo: **1,11 ms por caracter de envoltura y 165 MB
+de techo** (profundidad 5), 0,2 s para ese mismo CODEOWNERS de 96 B.
 No pretendemos lo contrario: cada archivo no sintetizado se marca
 `SKIPPED_TOO_LARGE` o `SKIPPED_BUDGET` en el manifest. Nada se oculta.
 
 La sintesis del nivel 2 (generator Python) **no es byte-reproducible**: el mismo archivo,
 tres corridas, produce programas distintos (todos con roundtrip PASS). Lo que estabiliza el
-corpus es `--resume`, que reutiliza los PASS previos. El nivel 1 (codec) si es determinista,
-y **el port a Zig (`tools/zig_canonical/mbsearch.zig`) tambien lo es**: misma configuracion,
-misma huella (medido 3 objetivos x 5 repeticiones → huella unica). Ojo: determinista no es
+corpus **no** es `--resume` —su estado (`evidence/level2_state.json`) está en `.gitignore`,
+así que es local a un host— sino la **adopción del manifest commiteado**: el build arrastra
+los PASS que ya tienen su `.mal` en disco con el sha256 del manifest intacto, y no los
+resintetiza. Medido 2026-11-01: `--level1-only` sobre el corpus entero reescribió un
+`manifest/translation_manifest.json` **byte-idéntico** al que había (`54c4b704…`,
+1.605 adoptados, 0 resintetizados, 1,2 s de muro); esa comparación es la fila
+`REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED`, escrita como medida, no como literal.
+El nivel 1 (codec) si es determinista, y **el port a Zig
+(`tools/zig_canonical/mbsearch.zig`) tambien lo es**: misma configuracion, misma huella
+(medido 3 objetivos x 5 repeticiones → huella unica). Ojo: determinista no es
 "reproduce el corpus commiteado" — contra los `.mal` del repo son 0/379 byte-identicos.
-Lo que el port si cubre es el corpus entero: 379 objetivos (cadenas de envoltura de 72 a 244
-caracteres) en 63 s de pared, 70,7M de evaluaciones, 379/379 canonicos bajo `mbc`.
+Lo que el port si cubre es el corpus entero: los 379 objetivos originales (cadenas de
+envoltura de 72 a 244 caracteres) en 63 s de pared, 70,7M de evaluaciones, 379/379
+canonicos bajo `mbc`, **más** los 1.226 que suben la frontera a 1.022 B
+(`tools/extend_level2_zig.py`, 1.173.971.071 evaluaciones en 933 s).
+
+El nivel 1 tiene su propio gate: `tools/level1_determinism.py` codifica **dos veces** cada
+fuente TEXT y exige que los dos payloads coincidan entre si y con la envoltura commiteada
+byte a byte. Medido 2026-11-01: **4.258/4.258 PASS en 0,44 s** (42,5M de caracteres de
+envoltura), con `source_sha256` y `envelope_sha256` del manifest reproduciéndose también
+4.258/4.258 — `evidence/level1_determinism_20261101T214729ZZ/`. Por eso el build puede
+prometer `REPRODUCIBLE_BUILD_LEVEL1_BYTE_EXACT`; la sintesis de nivel 2 se marca
+`REPRODUCIBLE_BUILD_LEVEL2_SYNTHESIS = NOT_CLAIMED` (no hay reclamación que sostener ahí).
 
 Una envoltura `.malrt1` es texto ASCII (`MALRT1:<base64>:<sha256>`), **no** un
 programa Malbolge. Solo los archivos bajo `malbolge/` son Malbolge ejecutable.
@@ -58,11 +81,13 @@ programa Malbolge. Solo los archivos bajo `malbolge/` son Malbolge ejecutable.
 | Archivos fuente (incl. 3 symlinks registrados) | 4,281 |
 | Archivos de texto mirror-eados (nivel 1) | 4,258 / 4,258 (paridad codec, 0 desajustes) |
 | Archivos binarios saltados | 20 |
-| **Programas reales de Malbolge sintetizados + ejecutados (nivel 2)** | **379 / 379 elegibles (≤128 B), 0 fallos** |
+| **Programas reales de Malbolge sintetizados + ejecutados (nivel 2)** | **1.605 / 4.258 textos (379 ≤128 B por el generator + 1.226 hasta 1.022 B por el port a Zig), 0 fallos** |
 | Bytes de texto originales | 31,647,823 |
+| Bytes de texto cubiertos por nivel 2 | 662,412 |
 | Bytes de envoltura mirror (`mirror/`) | 42,509,444 (×1.34) |
-| Bytes de programa real de Malbolge (`malbolge/`) | 1,421,372 desde 21,902 bytes fuente |
-| Ratio de expansion (nivel 2) | min ×41.7 · mediana ×67.8 · max ×462.8 |
+| Bytes de programa real de Malbolge (`malbolge/`) | 23,944,625 |
+| Ratio de expansion (nivel 2) | min ×20.57 · mediana ×24.24 · max ×462.75 |
+| **Nivel 3 — Cat canónico sobre el catálogo entero** | **4.258 / 4.258 archivos, 31,647,823 bytes, byte-exactos bajo ambos oráculos** |
 
 Detalles completos: `evidence/metrics.json`, `evidence/roundtrip.json`,
 `evidence/VERDICTS.md` (tabla de claims) y su anexo de correcciones
@@ -79,12 +104,17 @@ propia, con un paquete de evidencia sellado por paso:
 | qué | resultado medido | paquete |
 |---|---|---|
 | oráculos C vendorizados y fijados por SHA-256 | `mb_ref.c` (mismo byte que BolgeForge y PureEpoch) + `olmstead_original.c` (Olmstead 1998, dominio público) | `vendor/oracles/PROVENANCE.txt` |
-| `tools/verify_corpus.py` — ejecutar **el archivo commiteado** | 379/379 en 9 ligas · inventario 4.281/4.281 · 1,57 s | `evidence/canonical_reverify_20261101T071314Z/` |
+| `tools/verify_corpus.py` — ejecutar **el archivo commiteado** | 1.605/1.605 · inventario 4.281/4.281 · 6,27 s (antes: 379/379 en 1,57 s) | `evidence/canonical_reverify_20261101T223703Z/` |
 | `tools/engine_gate.py` — acuerdo semántico multi-motor, tier 2 con stdin real | `zig/bolg1` 382/383 (trunca a ~64 KiB) y toolkit Python 379/383 (0/4) ⇒ **DIVERGENTES**; los oráculos 383/383 | `evidence/engine_canonical_gate_20261101T080313ZZ/`, `…T082034ZZ/` |
 | `tools/zig_canonical/mbc.zig` — motor canónico en Zig | **383/383** CANONICAL_AGREEMENT · 421.317.177 pasos/s frente a 412.592.903 del oráculo (ratio **1,02**) | `evidence/zig_canonical_engine_gate_20261101T154528ZZ/` |
 | `tools/zig_canonical/mbsearch.zig` — port a Zig de la búsqueda del nivel 2 | corpus **379/379** canónico en **63 s** (70,7M de evaluaciones) · 12/12 y 30/30 byte-idéntico a la referencia con flujo RNG compartido | ver sección Zig |
-| `CONTRACT_CAT_FED` — un solo `.mal` copiador con el archivo por stdin | **4.258/4.258** exactos bajo ambos oráculos, 31.647.823 bytes, 93,3 s | `evidence/corpus_cat_feasibility_20261101T074215Z/` |
+| `CONTRACT_CAT_FED` — factibilidad: un solo `.mal` copiador con el archivo por stdin | **4.258/4.258** exactos bajo ambos oráculos, 31.647.823 bytes, 93,3 s | `evidence/corpus_cat_feasibility_20261101T074215Z/` |
+| **nivel 3 adoptado**: `tools/verify_level3.py` sobre el Cat vendorizado y fijado por SHA-256 | **4.258/4.258** exactos bajo `mb_ref` y `olmstead`, 31.647.823 bytes, 82,1 s, 0 fallos | `evidence/level3_cat_sweep_20261101T223138Z/` |
 | reparación del snapshot | 199 TEXT devueltos a los bytes de su propia envoltura + 3 BINARY desde upstream en `befd3af` (2 normalizados, 1 ausente) | `evidence/snapshot_eol_repair_20261101/` |
+| `tools/level1_determinism.py` — determinismo del nivel 1 | **4.258/4.258** doble codificación idéntica y **byte-identica al `mirror/` commiteado** en 0,44 s | `evidence/level1_determinism_20261101T214729ZZ/` |
+| sonda de tope del nivel 2 (Zig vs Python) | port: 1,11 ms/caracter y 165 MB (d5), frontera dura en la cinta (59.049 celdas ⇒ ~1.830 B a d5, ~3.900 B a d8); Python: **>3 GB a 96 B y >5,5 GB a 97 B** | `evidence/level2_cap_probe_20261101T215239ZZ/` |
+| `tools/extend_level2_zig.py` — mover la frontera del nivel 2 de 128 B a 1.024 B con el port | **1.226 artefactos nuevos, 0 fallos**, 1.173.971.071 evaluaciones, 933 s; corpus resultante verificado 1.605/1.605 | `evidence/level2_zig_extend_20261101T221438Z/` |
+| adopción del corpus commiteado en el build (nada de resintetizar sellado) | manifest reescrito **byte-idéntico** (`54c4b704…`): 1.605 adoptados, 0 resintetizados, 1,2 s | fila `REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED` en `evidence/VERDICTS.md` |
 
 Nada de esto requiere `malbolge-generator`, salvo el tier diferencial del port.
 
@@ -103,12 +133,23 @@ En este host: `python3` (los `py` de la GUIA son `[HISTORICAL]` de la maquina Wi
 
 ```
 python3 tools/build_malboguistic.py                # completo: nivel 1 + nivel 2 (default 1 h de budget)
-python3 tools/build_malboguistic.py --level1-only  # solo codec mirror, segundos
+python3 tools/build_malboguistic.py --level1-only  # solo codec mirror + adopcion, segundos
 python3 tools/verify_corpus.py                     # re-verifica el nivel 2 SIN generator (oraculos C)
+python3 tools/verify_level3.py                     # nivel 3: el catalogo entero por stdin contra el Cat
+python3 tools/level1_determinism.py --evidence evidence/level1_determinism_<UTC>/
+python3 tools/extend_level2_zig.py --evidence evidence/level2_zig_extend_<UTC>/ \
+    --cap-bytes 1024 --depth 5 --apply-manifest   # mueve la frontera del nivel 2
 ```
 
-Opciones: `--e2e-max-bytes` (default 128), `--e2e-budget-seconds` (default 3600),
-`--workers`, `--resume` (reusa resultados PASS previos para fuentes sin cambios).
+Opciones del build: `--e2e-max-bytes` (default 128), `--e2e-budget-seconds` (default 3600),
+`--workers`, `--resume` (estado local al host, esta en `.gitignore`) y `--no-adopt`
+(resintetiza y **sustituye bytes sellados**; por defecto apagado).
+
+`tools/extend_level2_zig.py` no necesita `malbolge-generator`, pero si `zig` en el PATH:
+compila el port desde `tools/zig_canonical/*.zig` con `zig build-exe -O ReleaseFast` y deja
+las huellas del binario que ejecuto en el paquete. Escribe cada artefacto nuevo con
+`lineage: "zig_port"` y `synthesizer_binary_sha256`, y lo verifica con los dos oraculos
+antes de tocar el manifest. Sin `--apply-manifest` corre en scratch y no escribe el repo.
 
 Exit code 0 ⇔ cero desajustes de codec Y cero ejecuciones fallidas.
 
@@ -137,10 +178,33 @@ python3 tools/verify_corpus.py --no-differential   # solo mb_ref (más rápido)
 
 Comprueba 9 ligas por artefacto: sha del `.mal` vs manifest, sha de la envoltura vs
 manifest, auto-consistencia de la envoltura, snapshot == bytes decodificados, HALT y
-salida exacta en cada motor, y acuerdo entre motores. Exit 0 ⇔ 379/379 limpios.
+salida exacta en cada motor, y acuerdo entre motores. Exit 0 ⇔ todos limpios.
 
-Ultima corrida (2026-11-01, Linux): **379/379 en las 9 ligas + inventario 4281/4281**,
-1.57 s de pared → `evidence/canonical_reverify_20261101T071314Z/`.
+Ultima corrida (2026-11-01, Linux, corpus extendido): **1.605/1.605 en las 9 ligas +
+inventario 4281/4281**, 6,27 s de pared → `evidence/canonical_reverify_20261101T223703Z/`.
+Antes de la extension: 379/379 en 1,57 s → `evidence/canonical_reverify_20261101T071314Z/`.
+
+## Nivel 3 — el catalogo entero por un solo programa (`CONTRACT_CAT_FED`)
+
+El nivel 2 no puede cubrir los 4.258 textos: cada artifact tiene que caber en la cinta
+canonica de 59.049 celdas, y con `depth 5` eso corta alrededor de 1.830 B de fuente. El
+nivel 3 cambia el contrato en vez de forzar el tope: **un** programa,
+`vendor/cat/cat_compact.mal` (7.596 celdas, sha256 `dd8f9b10…`, fijado en
+`vendor/cat/PROVENANCE.txt`), recibe el archivo por stdin y tiene que imprimir sus bytes
+exactos.
+
+```
+python3 tools/verify_level3.py                    # 4.258 archivos x 2 oraculos, ~82 s
+python3 tools/verify_level3.py --sample 50        # smoke, nunca un reclamo sellado
+```
+
+Ultima corrida sellada (2026-11-01, Linux): **4.258/4.258 exactos** bajo `mb_ref` y
+`olmstead`, 31.647.823 bytes, 82,1 s, 0 fallos → `evidence/level3_cat_sweep_20261101T223138Z/`.
+
+Lo que el nivel 3 **no** es: no mete los bytes del archivo dentro del programa, así que no
+hay traducción por archivo ni árbol `malbolge/` comparable. Es un contrato distinto, no un
+nivel 2 mas grande, y no sustituye a las filas de nivel 2 del manifest. Scope: las entradas
+`TEXT` del catálogo; las 20 `BINARY` y 3 `SYMLINK` quedan fuera de la corrida.
 
 Esto re-verifica **ejecución** y **integridad del snapshot**. La **síntesis** sigue
 necesitando `malbolge-generator`, que no está en PyPI: se instala desde la copia local
@@ -172,8 +236,15 @@ lados consumen el mismo flujo aleatorio (SplitMix64 copiado en Python dentro de
 `mbsearch_gate.py`). Lo que **no**: el sembrado MT19937 de `random.Random(42)`, que no
 corresponde a ninguna inicialización estándar. Por eso el port **no regenera los `.mal`
 commiteados** (0/379 byte-identicos) y tampoco lo hace la toolkit actual: la
-procedencia del corpus es heterogénea (`search_depth` = `null` en 354 entradas, `3` en
-25). La canonicidad, en cambio, sí se reproduce: 379/379.
+procedencia del linaje generator es heterogénea (`search_depth` = `null` en 354 entradas,
+`3` en 25). La canonicidad, en cambio, sí se reproduce: 379/379 en 63 s, y los 1.226
+objetivos nuevos del `tools/extend_level2_zig.py` (hasta 1.022 B de fuente, `depth 5`,
+`lineage: zig_port`) salen del mismo port con el binario actual
+(`mbsearch.zig` fuente `b99e5e91…`, binario `e986891a…`; la diferencia con el binario que
+selló el gate es solo el comentario de cabecera, y la equivalencia de comportamiento se
+midio: 439/439 programas idénticos, `evidence/zig_search_port_gate_20261101T204229ZZ/SOURCE_CORRECTION.md`).
+Resultado de la extension: 1.173.971.071 evaluaciones en 933 s, 0 fallos, y
+**1.605/1.605** canónicos al re-verificar el árbol entero.
 
 Coste medido del port (mismo host): **70,7M de evaluaciones de los 379 objetivos en 63 s
 de pared**, ≥1,1M evaluaciones/s, es decir **78×-107×** sobre el camino Python. Eso
@@ -211,15 +282,13 @@ ahora el inventario completo en cada corrida para que un binario mutado no vuelv
 quedar invisible. El defecto también habría roto `--resume` (compara el sha de la fuente).
 Radio y hashes: `evidence/snapshot_eol_repair_20261101/`.
 
-Un hueco que queda a la vista: `test/fixtures/Binary/linguist.gem` sigue **sin estar en
-git**, porque el `.gitignore` que viene en el propio tarball de linguist
-(`vendor/source_snapshot/.gitignore`, línea 1: `*.gem`) lo cubre. No se editó ese
-`.gitignore` porque rompería la byte-exactitud del snapshot, y `git add -f` sobre esa
-ruta es una decisión explícita que no se tomó. Consecuencia: este working tree tiene
-4.278 archivos en disco (4.277 trackeados + el `.gem` ignorado) frente a 4.281 entradas
-del inventario — las 3 de symlinks van exentas—, pero **un clon fresco sólo trae 4.277**
-y `tools/verify_corpus.py` reporta el `.gem` como faltante (exit 1). Se resuelve recuperándolo de upstream en `befd3af` o
-forzando el `add`, no silenciando el chequeo.
+El hueco del `.gem` está cerrado: `test/fixtures/Binary/linguist.gem` (3.072 bytes, sha256
+`55f5f0b5…` == la del inventario) entra en git con `git add -f` — decisión explícita de la
+host el 2026-11-01. No se tocó `vendor/source_snapshot/.gitignore` (línea 1: `*.gem`), que
+sigue siendo el archivo del tarball y sigue siendo parte de la byte-exactitud del snapshot:
+el `add -f` es la excepción, no el cambio de regla. Consecuencia: un clon fresco trae los
+4.278 archivos regulares del inventario y `tools/verify_corpus.py` ya no reporta el `.gem`
+como faltante.
 
 ## Avisos
 
@@ -250,6 +319,8 @@ vendor/source_snapshot/      arbol fijado de linguist (sin .git) + su LICENSE
 vendor/malbolge_translator/  paquete traductor vendored (MIT), ver vendor/TRANSLATOR_SOURCE.txt
 vendor/oracles/              mb_ref.c + olmstead_original.c, fijados por SHA-256
                              (procedencia y licencias: vendor/oracles/PROVENANCE.txt)
+vendor/cat/                  cat_compact.mal del nivel 3, fijado por SHA-256
+                             (procedencia y licencia: vendor/cat/PROVENANCE.txt)
 mirror/                      artifacts NIVEL 1: <path>.malrt1 (envolturas de codec)
 malbolge/                    artifacts NIVEL 2: <path>.mal (programas reales ejecutados)
 manifest/                    source_inventory.json, translation_manifest.json
@@ -258,8 +329,11 @@ evidence/<tema>_<UTC>/       packs de evidencia sellados, uno por corrida (nunca
                              reutiliza una ruta: el gate se niega si ya existe)
 tools/build_malboguistic.py  el build reproducible de un comando (nivel 1 + nivel 2)
 tools/verify_corpus.py       re-verificacion canónica del corpus + inventario completo
+tools/verify_level3.py       nivel 3: catalogo completo por stdin contra el Cat canónico
+tools/extend_level2_zig.py   mueve la frontera del nivel 2 con el port a Zig
 tools/engine_gate.py         gate de semantica multi-engine (adapters bajo tools/gate_adapters/)
 tools/mbsearch_gate.py       gate del port a Zig (corpus / determinismo / diferencial)
+tools/level1_determinism.py  gate de determinismo del nivel 1 (doble codificacion vs envoltura commiteada)
 tools/zig_canonical/         mbc.zig (interprete canonico) y mbsearch.zig (busqueda nivel 2)
 SOURCE_REPO.txt / SOURCE_COMMIT.txt   procedencia del snapshot
 ```
