@@ -27,6 +27,7 @@ Nunca presentes un `.malrt1` como "código Malbolge".
 | `py tools/build_malboguistic.py --e2e-max-bytes 256` | **NO VIABLE en este host**: sube el tope, pero el generador Python no cabe (medido: >5,5 GB ya a 97 B de fuente). Subir el tope del nivel 2 solo tiene sentido por el port a Zig | la guarda lo mata en ~17 s |
 | `python3 tools/verify_corpus.py` | **re-verifica los 1.605 `.mal` ejecutando el archivo** bajo mb_ref + Olmstead 1998; no necesita `malbolge-generator` | ~6 s |
 | `python3 tools/verify_level3.py` | nivel 3: pasa los 4.258 textos del catálogo por stdin al Cat canónico (`vendor/cat/cat_compact.mal`) bajo ambos oráculos; vende el pin del Cat y de los motores | ~82 s |
+| `python3 tools/verify_linguist_pipeline.py` | barrido nivel 2 → oráculos → decode → **clasificación con el linguist del snapshot** (6 variantes por archivo, 9.630 blobs); construye el runtime Ruby en `/tmp`, nunca en el repo | 17,5 s (7,4 s ejecución + 10,1 s clasificación) en 1.605 archivos; +7,4 s si regenera la DB |
 | `python3 tools/extend_level2_zig.py --evidence evidence/… --cap-bytes 1024 --depth 5 --apply-manifest` | sube la frontera del nivel 2 con el port a Zig: sintetiza, verifica con ambos oráculos y solo entonces escribe `malbolge/` + manifest. Sin `--apply-manifest` no toca el repo | ~15 min para 1.226 archivos |
 | `python3 tools/mbsearch_gate.py --mode all --limit 12 --depth 5 --site-packages DIR` | gate del port a Zig (`tools/zig_canonical/mbsearch.zig`): canonicidad con `mbc`, determinismo e igualdad textual con la referencia | ~1 min |
 | `python3 tools/mbsearch_gate.py --mode corpus --limit 0 --depth 5` | los 379 objetivos del manifest con el port en Zig (construye `mbsearch`+`mbc` él solo) | ~1 min |
@@ -55,12 +56,40 @@ Salida exitosa termina con `[done] manifest_sha256=...` y exit 0.
   (`vendor/cat/cat_compact.mal` = `dd8f9b10…`). Si no casan, el verificador se niega a
   producir evidencia: alguien cambió un interpretador o el programa, y hay que
   re-validar el pin y su `PROVENANCE.txt` antes de tocar nada.
-- **Un directorio de evidencia no se reusa.** `verify_corpus.py` y `verify_level3.py` se
+- **Un directorio de evidencia no se reusa.** Los verificadores (`verify_corpus.py`,
+  `verify_level3.py`, `verify_linguist_pipeline.py`) se
   niegan a escribir sobre `evidence/<tipo>_<UTC>` existente. Deja el viejo y corre con
   fecha nueva.
+- **`verify_linguist_pipeline.py` se niega a sellar si huele a ruta del host.** Antes de
+  escribir `SHA256SUMS.txt` recorre el pack buscando el prefijo absoluto del repo y del home
+  (`jobs.jsonl` viaja tokenizado con `{SNAPSHOT}`/`{STAGE}`/`{REPO}`…). Salta
+  «El pack NO se sella: hay rutas absolutas del host en la evidencia» ⇒ el repo es público,
+  así que eso es un fallo igual que un `FAIL`: corrige la tokenización, no borres el archivo.
+  Si salta por el código de la propia herramienta (que también se copia al pack), el tripwire
+  va demasiado ancho: estrecha los patrones, no los amplíes.
 - **El 379/379 PASS histórico ejecutaba opcodes en memoria, no el archivo.** Por eso
   existe `verify_corpus.py`. Al citar el nivel 2, di qué método usaste. Hoy el número
   del archivo ejecutado es **1.605/1.605** (`evidence/canonical_reverify_20261101T223703Z/`).
+- **La concordancia de clasificación 1.605/1.605 NO es una prueba de fidelidad.** Es el
+  control del banco de pruebas: `from_mal` se clasifica en la misma ruta lógica y con los
+  mismos bytes que `source`, así que el acuerdo está *implicado* por la paridad byte a
+  byte. Al citar el barrido de linguist, la evidencia de fidelidad es el eslabón
+  `decoded_matches_snapshot`; la clasificación sólo dice que el harness no se rompió.
+- **linguist no conoce Malbolge: 0/1.605.** `languages.yml` del snapshot (9.7.0) no tiene
+  ninguna entrada Malbolge, así que ningún resultado de
+  `tools/verify_linguist_pipeline.py` autoriza a decir que "linguist reconoce los `.mal`".
+  Dato aparte y más incómodo: la envoltura MALRT1 sin decodificar pasa por el archivo
+  original en 1.244 de 1.605 casos, porque linguist decide por la ruta primero.
+- **El barrido de linguist necesita Ruby y cae cerrado si faltan gemas.** Pide
+  `charlock_holmes` y `mini_mime` (`gem install --user-install charlock_holmes mini_mime`)
+  y **no instala nada por su cuenta**. El runtime (`linguist.so` + `samples_data.rb`) se
+  construye en `--workdir` (`/tmp/malboguidstic_linguist_rt` por defecto), nunca dentro del
+  repo: el snapshot sigue byte-exacto, y `LINGUIST_PROVENANCE_MISMATCH` aborta si alguno de
+  los 12 archivos críticos del clasificador driftan respecto a `manifest/source_inventory.json`.
+- **`linguist.rb` se carga con UNA línea menos, a propósito.** El worker quita
+  `require 'linguist/repository'` (única arrastradora de la gema nativa `rugged`, usada sólo
+  para repositorios Git) y aborta si el archivo no pierde exactamente esa línea. Si algún
+  día ves más de una línea caída, el worker está roto o alguien tocó el snapshot.
 - **`malbolge-generator` no está en el `python3` del sistema.** No está en PyPI
   (medido 2026-11-01), así que sólo existe si lo instalas desde una copia local del
   toolkit en un venv. Sin él el build de nivel 2 reporta `SYNTHESIS_UNAVAILABLE`;

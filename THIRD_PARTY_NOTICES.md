@@ -37,6 +37,32 @@
   re-run the committed `.mal` files without the generator; synthesizing *new*
   targets still needs it.
 
+## Ruby gems used by `tools/verify_linguist_pipeline.py` (runtime, NOT vendored)
+
+The classifier this repo runs is the vendored linguist from the snapshot (see
+`## github-linguist/linguist` above), but two of its dependencies are host gems,
+installed 2026-11-02 with `gem install --user-install` and deliberately not copied
+into this repo. Licenses and versions read from the local gemspec metadata:
+
+- **`charlock_holmes` 0.7.9, MIT** (`github.com/brianmario/charlock_holmes`). Native
+  encoding detection; the only thing linguist uses it for on this path is
+  `Linguist::BlobHelper#detect_encoding`, which feeds `binary?`. Built against the
+  system `libicu-dev` 74.2.
+- **`mini_mime` 1.1.5, MIT** (`github.com/discourse/mini_mime`). MIME-type lookup used
+  by `blob_helper.rb`.
+- **`rugged` is NOT installed and is not needed.** It is the sole reason
+  `lib/linguist/repository.rb` (whole-Git-repository classification) cannot load, and
+  that file is outside the single-blob detection path. `tools/gate_adapters/linguist_classify.rb`
+  drops exactly that one `require` and aborts if the load would drop any other line.
+- The sweep builds two more artifacts, also **not vendored** and outside the repo (in
+  `--workdir`, default `/tmp/malboguidstic_linguist_rt`): `linguist.so`, compiled from
+  the snapshot's own `ext/linguist/` sources, and `lib/linguist/samples_data.rb`, the
+  classifier DB generated from the snapshot's `samples/` tree. Both are recorded by
+  SHA-256 in every evidence pack (`linguist_runtime` in `summary.json`) together with
+  the `BUILD_RECIPE.sh` that reproduces them.
+- The tool **never installs anything**: it probes for the two gems and fails closed
+  with the exact command to run.
+
 ## Oráculos Malbolge (`vendor/oracles/`)
 
 Vendored so that `tools/verify_corpus.py` does not depend on a host path or on a

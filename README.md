@@ -115,6 +115,7 @@ propia, con un paquete de evidencia sellado por paso:
 | sonda de tope del nivel 2 (Zig vs Python) | port: 1,11 ms/caracter y 165 MB (d5), frontera dura en la cinta (59.049 celdas ⇒ ~1.830 B a d5, ~3.900 B a d8); Python: **>3 GB a 96 B y >5,5 GB a 97 B** | `evidence/level2_cap_probe_20261101T215239ZZ/` |
 | `tools/extend_level2_zig.py` — mover la frontera del nivel 2 de 128 B a 1.024 B con el port | **1.226 artefactos nuevos, 0 fallos**, 1.173.971.071 evaluaciones, 933 s; corpus resultante verificado 1.605/1.605 | `evidence/level2_zig_extend_20261101T221438Z/` |
 | adopción del corpus commiteado en el build (nada de resintetizar sellado) | manifest reescrito **byte-idéntico** (`54c4b704…`): 1.605 adoptados, 0 resintetizados, 1,2 s | fila `REPRODUCIBLE_BUILD_COMMITTED_CORPUS_UNCHANGED` en `evidence/VERDICTS.md` |
+| `tools/verify_linguist_pipeline.py` — el corpus devuelto por los `.mal`, clasificado por el linguist del snapshot | **1.605/1.605** de acuerdo con la clasificación del original · 441 idiomas · cadena de ejecución 10/10 eslabones verdes · **Malbolge no existe para linguist: 0/1.605** | `evidence/linguist_pipeline_sweep_20261102T043612Z/` |
 
 Nada de esto requiere `malbolge-generator`, salvo el tier diferencial del port.
 
@@ -136,6 +137,7 @@ python3 tools/build_malboguistic.py                # completo: nivel 1 + nivel 2
 python3 tools/build_malboguistic.py --level1-only  # solo codec mirror + adopcion, segundos
 python3 tools/verify_corpus.py                     # re-verifica el nivel 2 SIN generator (oraculos C)
 python3 tools/verify_level3.py                     # nivel 3: el catalogo entero por stdin contra el Cat
+python3 tools/verify_linguist_pipeline.py           # nivel 2 ejecutado -> decodificado -> clasificado por linguist
 python3 tools/level1_determinism.py --evidence evidence/level1_determinism_<UTC>/
 python3 tools/extend_level2_zig.py --evidence evidence/level2_zig_extend_<UTC>/ \
     --cap-bytes 1024 --depth 5 --apply-manifest   # mueve la frontera del nivel 2
@@ -212,6 +214,65 @@ del monorepo (`workspace/malbolge_toolkit`, `pip install <ese directorio>`). Sin
 build reporta `SYNTHESIS_UNAVAILABLE` y no produce nivel 2 nuevo. Con él, el ciclo
 fuente → `.mal` → oráculos canónicos → SHA-256 ya vuelve a cerrar en Linux
 (`evidence/synthesis_linux_probe_20261101/`).
+
+## El corpus devuelto por los `.mal`, clasificado por el linguist del propio snapshot
+
+`tools/verify_linguist_pipeline.py` cierra el círculo sobre la población `PASS` del
+manifest: ejecuta cada archivo `.mal` commiteado bajo los dos oráculos fijados por
+SHA-256, decodifica la envoltura MALRT1 con el codec del repo, y pasa los bytes a
+**la copia de linguist que está dentro del snapshot** (`vendor/source_snapshot`,
+versión 9.7.0), no a la gema publicada. Cada archivo se clasifica en seis variantes
+(`source`, `source_repeat`, `from_mal`, `envelope`, `malprog`, `empty`), todas con el
+**mismo path lógico** salvo `malprog`, de modo que la única variable sea el contenido.
+
+Corrida sellada (2026-11-02 UTC, Linux; 7,4 s de ejecución + 10,1 s de clasificación):
+
+| afirmación | medido |
+|---|---|
+| LEVEL2_ARTIFACTS_EXECUTE_AND_REPRODUCE | **1.605/1.605**, cadena de 10 eslabones verde |
+| LINGUIST_CLASSIFICATION_PRESERVED_THROUGH_MALBOLGE | **1.605/1.605** |
+| flags de decisión (tipo, grupo, `generated?`, `documentation?`, `vendored?`) | **1.605/1.605** |
+| idioma reconocido en la fuente original | 1.580/1.605, **441 idiomas distintos** |
+| MALBOLGE_RECOGNIZED_BY_LINGUIST | **NEGATIVE: 0/1.605** |
+| control negativo (0 bytes) | 1.605/1.605 devuelven `NIL` |
+| control de determinismo (mismo blob, dos veces) | 1.605/1.605 idéntico |
+| sensibilidad al contenido (envoltura sin decodificar) | 361/1.605 cambian (93 a `NIL`, 268 a otro idioma) |
+
+Las tres lecturas obligadas:
+
+- **La concordancia de clasificación está implicada por la paridad byte a byte**, no es
+  evidencia independiente de fidelidad: mismo path y mismos bytes forzan el mismo
+  veredicto. Su valor es que actúa de control del banco de pruebas — si el harness se
+  rompe, ahí se ve. La evidencia de fidelidad sigue siendo `decoded_matches_snapshot`.
+- **linguist 9.7.0 no conoce Malbolge**: cero coincidencias en su `languages.yml`. Ningún
+  resultado de este barrido autoriza a decir que "linguist reconoce nuestros `.mal`".
+- La envoltura sin decodificar pasa por el archivo original en **1.244 de 1.605** casos:
+  un clasificador que mira la ruta por delante no nota que le llegan MALRT1. Es conducta
+  de linguist, no un defecto del corpus, y hay que decirlo cuando se cite esta sección.
+
+Requisitos del entorno: Ruby ≥ 3.2 con las gemas `charlock_holmes` y `mini_mime`
+(`gem install --user-install charlock_holmes mini_mime`; el tool **no** instala gemas y
+falla cerrado con el comando exacto). El runtime de linguist —lexer nativo
+`linguist.so` y `samples_data.rb` generado— se construye en `--workdir` (por defecto
+`/tmp/malboguidstic_linguist_rt`), **nunca dentro del repo**. `linguist.rb` se carga
+quitando una sola línea, `require 'linguist/repository'`, única arrastradora de `rugged`
+y usada sólo para clasificar repositorios Git; el worker aborta si el fichero no pierde
+exactamente esa una línea.
+
+```
+python3 tools/verify_linguist_pipeline.py --limit 40 --evidence /tmp/smoke   # humo, no sella
+python3 tools/verify_linguist_pipeline.py                                    # barrido completo
+```
+
+Cuatro corridas completas independientes: **0** diferencias en clasificaciones y **0** en
+checks entre ellas; lo único que cambia son los `wall_ms` de los motores. La DB del
+clasificador es byte-estable entre dos generaciones (`sha256` `e6922461…`, 5.871.252 B).
+
+El pack **no puede contener rutas del host**: `jobs.jsonl` se tokeniza (`{SNAPSHOT}`,
+`{STAGE}`, `{REPO}`, `{MIRROR}`, `{MALBOLGE}`, `{WORKDIR}`) y la copia absoluta queda en el
+workdir; antes de escribir `SHA256SUMS.txt` un tripwire recorre el directorio y, si algún
+archivo conserva el prefijo absoluto del repo o del home, se niega a sellar. Este repo es
+público, así que la fuga de rutas es tan fallo como un `FAIL` en la cadena.
 
 ## Motor canónico y búsqueda en Zig (`tools/zig_canonical/`)
 
@@ -330,6 +391,8 @@ evidence/<tema>_<UTC>/       packs de evidencia sellados, uno por corrida (nunca
 tools/build_malboguistic.py  el build reproducible de un comando (nivel 1 + nivel 2)
 tools/verify_corpus.py       re-verificacion canónica del corpus + inventario completo
 tools/verify_level3.py       nivel 3: catalogo completo por stdin contra el Cat canónico
+tools/verify_linguist_pipeline.py  nivel 2 ejecutado -> decodificado -> clasificado por el
+                             linguist del snapshot (worker Ruby en tools/gate_adapters/)
 tools/extend_level2_zig.py   mueve la frontera del nivel 2 con el port a Zig
 tools/engine_gate.py         gate de semantica multi-engine (adapters bajo tools/gate_adapters/)
 tools/mbsearch_gate.py       gate del port a Zig (corpus / determinismo / diferencial)

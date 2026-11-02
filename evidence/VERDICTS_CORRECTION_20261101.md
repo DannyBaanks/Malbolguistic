@@ -115,3 +115,77 @@ contrato, no forzando el tope.
 Cerrado también el hueco del snapshot: `test/fixtures/Binary/linguist.gem` está en git
 desde hoy con `git add -f` (decisión de la host, sha `55f5f0b5…` == la del inventario). El
 `.gitignore` vendorizado no se tocó.
+
+## El corpus devuelto por los `.mal`, clasificado por el linguist del snapshot (append 2026-11-02 UTC)
+
+Aparece una verificación nueva y hay que enmarcarla antes de que alguien la cite mal.
+`tools/verify_linguist_pipeline.py` (+ worker Ruby `tools/gate_adapters/linguist_classify.rb`
+y generador `linguist_gen_samples.rb`) toma los 1.605 artefactos `PASS`, los ejecuta bajo los
+dos oráculos fijados, decodifica la envoltura con el codec del repo y pasa los bytes al
+**linguist vendorizado en el propio snapshot** (versión 9.7.0). Pack sellado:
+`evidence/linguist_pipeline_sweep_20261102T043612Z/` (7,4 s de ejecución + 10,1 s de
+clasificación, exit 0); cómo se llegó a ese pack y sólo a ese está en la nota de manejo de
+evidencia más abajo.
+
+| clave medida | valor |
+|---|---|
+| cadena de ejecución (10 eslabones, por artifact) | **1.605/1.605**, 0 fallos |
+| `LINGUIST_CLASSIFICATION_PRESERVED_THROUGH_MALBOLGE` | 1.605/1.605 |
+| banderas de decisión (`type`/`group`/`generated?`/`documentation?`/`vendored?`) | 1.605/1.605 |
+| `MALBOLGE_RECOGNIZED_BY_LINGUIST` | **NEGATIVE — 0/1.605** |
+| fuente original clasificada (no `NIL`) | 1.580/1.605, 441 idiomas |
+| control negativo (0 bytes ⇒ `NIL`) | 1.605/1.605 |
+| control de determinismo (mismo blob dos veces) | 1.605/1.605 |
+| sensibilidad al contenido (envoltura cruda en la misma ruta) | 361/1.605 cambian: 93 a `NIL`, 268 a otro idioma |
+
+Cómo hay que leer la fila 2, que es la que se presta: **esa concordancia está implicada por
+la paridad byte a byte** — mismo path lógico, mismos bytes, mismo veredicto por construcción.
+No es evidencia independiente de que Malbolge «preserve» el archivo; es el control del banco
+de pruebas. La evidencia de fidelidad sigue siendo `decoded_matches_snapshot` = 1.605/1.605,
+que es lo que la cadena de arriba mide eslabón por eslabón.
+
+El hallazgo realmente nuevo es el negativo: **linguist 9.7.0 no tiene Malbolge en su
+`languages.yml`** (cero coincidencias buscadas en el fichero). Ninguna salida de este barrido
+autoriza a afirmar que un clasificador externo reconozca nuestros programas `.mal` como
+Malbolge, ni que el corpus sea «visible como Malbolge» para ninguna herramienta externa.
+
+Y un tercero incómodo que conviene tener escrito: presentarle a linguist la envoltura MALRT1
+sin decodificar produce el mismo idioma que el archivo original en **1.244 de 1.605** casos.
+Quien clasifique por la ruta no nota que le están dando un sobre de códec. No es un defecto
+del corpus; es una limitación del experimento de clasificación, y por eso el control de
+sensibilidad va medido en el mismo pack.
+
+Dos notas de método, para que el pack no se lea mejor de lo que es:
+
+- **Determinismo entre corridas, medido.** Se corrió el barrido completo **cuatro veces**. Diferencia
+  entre `raw.jsonl` y `linguist_raw.jsonl` de las cuatro, ignorando `wall_ms` y la marca de tiempo:
+  **0** clasificaciones distintas y **0** checks distintos en los 1.605 archivos; sólo cambian los
+  `wall_ms` de los motores. La `samples_data.rb` del clasificador es byte-estable entre dos
+  generaciones (`e6922461…`, 5.871.252 B).
+- **Manejo de evidencia, con la trazabilidad completa.** En `evidence/` queda **un solo pack** por
+  este experimento (`…T043612Z`). Los tres anteriores no se borraron ni se reescribieron: se
+  **movieron** fuera del repo (reversible con un `mv`) y siguen en `/tmp/malpipe/`; los dos
+  primeros llegaron a sellarse (tienen su `SHA256SUMS.txt`), el tercero abortó antes de sellar.
+  La razón de cada movimiento:
+  - `…T042221Z` → `/tmp/malpipe/pack_intermedio_042221Z`: reutilizó el runtime ya construido, así
+    que no midió el determinismo de la DB (`samples_data_deterministic` quedó en `None`). Se volvió
+    a sellar con `--rebuild-linguist`.
+  - `…T042315Z` → `/tmp/malpipe/pack_con_rutas_de_host_042315Z`: **fuga de rutas absolutas del host**
+    (`BUILD_RECIPE.sh` ×2 y `jobs.jsonl` ×1.605). Este repo es público, así que eso es un fallo, no
+    un detalle de formato. La fuga estaba sólo en los metadatos generados: las clasificaciones y los
+    checks de ese pack son idénticos a los del sellado (ver el control de arriba).
+  - `…T043532Z` → `/tmp/malpipe/pack_abortado_tripwire`: primer intento tras añadir el tripwire, que
+    saltó por **falso positivo** (los patrones de búsqueda genéricos `/home/` y `/root/` casaban con
+    el propio código de la herramienta, que se copia al pack). El tripwire se estrechó a los prefijos
+    concretos del repo y del home; las rutas del workdir en `VERDICT.md` (`/tmp/…`) quedan a la vista
+    porque no son rutas del usuario del host, y se citan aquí para que no se lean como ocultación.
+  El tripwire ahora tokeniza `jobs.jsonl` (`{SNAPSHOT}`, `{STAGE}`, `{REPO}`, `{MIRROR}`,
+  `{MALBOLGE}`, `{WORKDIR}`) y se niega a escribir `SHA256SUMS.txt` si algún archivo del pack
+  conserva el prefijo absoluto del repo o del home.
+
+NOT_DEMONSTRATED: que la gema publicada `github-linguist` dé los mismos veredictos (aquí sólo
+se usa la versión del snapshot); la clasificación de las 20 entradas `BINARY` y los 3
+`SYMLINK` del inventario; y cualquier cosa sobre los 2.653 `SKIPPED_TOO_LARGE`, que no tienen
+programa propio. El path de `repository.rb`/`rugged` queda excluido del cargador (una línea,
+con guarda que aborta si fuera otra cosa), así que la clasificación de repositorios Git enteros
+no está verificada aquí.
