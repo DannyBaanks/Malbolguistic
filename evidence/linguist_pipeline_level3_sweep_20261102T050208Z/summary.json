@@ -1,0 +1,242 @@
+{
+ "run_utc": "20261102T050208Z",
+ "level": 3,
+ "contract": "CONTRACT_CAT_FED",
+ "scope": {
+  "population": "entradas TEXT del inventario (nivel 3, catalogo completo) + las 20 BINARY",
+  "selected": 4278,
+  "population_total": 4278,
+  "limit": 0,
+  "level2_total_pass_in_manifest": 1605,
+  "inventory_text_entries": 4258,
+  "inventory_binary_entries": 20,
+  "include_non_text": true,
+  "bytes_covered": 32945606,
+  "symlink_entries_in_inventory": 3,
+  "symlink_absent_from_snapshot": [
+   "samples/Ant Build System/filenames/build.xml",
+   "samples/Markdown/symlink.md",
+   "test/fixtures/SVG/alg_schema.link.svg"
+  ]
+ },
+ "environment": {
+  "system": "Linux",
+  "release": "7.0.0-42-generic",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "ruby": "ruby 3.2.3 (2024-01-18 revision 52bb2ac0a6) [x86_64-linux-gnu]",
+  "gems": {
+   "charlock_holmes": "0.7.9",
+   "mini_mime": "1.1.5"
+  },
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cpu_count": 12
+ },
+ "oracle_pins": {
+  "mb_ref.c": "a8ce19c2dc93e36f8c9c24a271c4187d68f922b9455262c7199a009763fe3ad3",
+  "olmstead_original.c": "05abd38e78b266050c5a5e8cc5b36584daa5bbdeb404bfb351de7ea6fa26b510"
+ },
+ "engines": [
+  "mb_ref",
+  "olmstead_1998"
+ ],
+ "max_steps": 1200000000,
+ "per_process_timeout_s": 600.0,
+ "cat": {
+  "artifact": "vendor/cat/cat_compact.mal",
+  "sha256": "dd8f9b106dd4b25cf190a2fa1cf7f1b03db08d2cb30d4144f8791d46a347079b",
+  "bytes": 7596,
+  "pinned": true
+ },
+ "linguist_runtime": {
+  "workdir": "/tmp/malboguidstic_linguist_rt",
+  "samples_data_regenerated": true,
+  "samples_data_deterministic": true,
+  "samples_data_seconds": 8.89,
+  "linguist_lib_sha256_of_entrypoint": "45923b0449f4c154e74e6c6ee69e94ece08de0fee45913e6897ad08efcc989d7",
+  "linguist_so_sha256": "ccd681d9346a18228376aca76489e48fbfdc11536837fd515b0856cad18567d3",
+  "samples_data_sha256": "e6922461252aee2914cb1895ad8a8c63b47cc59f0b6d1048ade77f0d2532e0c7",
+  "samples_data_bytes": 5871252,
+  "linguist_version": "9.7.0"
+ },
+ "linguist_provenance": {
+  "critical_files_checked": 12,
+  "drift": [],
+  "repository_require_dropped": true,
+  "pack_paths_tokenized": [
+   "{REPO}",
+   "{SNAPSHOT}",
+   "{MIRROR}",
+   "{MALBOLGE}",
+   "{WORKDIR}",
+   "{STAGE}"
+  ],
+  "jobs_absolute_copy": "/tmp/malboguidstic_linguist_rt/jobs_20261102T050208Z.jsonl"
+ },
+ "execution": {
+  "artifacts": 4278,
+  "passed": 4278,
+  "failed": 0,
+  "wall_seconds": 109.81,
+  "engine_wall_ms_mean": 12.62,
+  "engine_wall_ms_max": 1383.8,
+  "failures": []
+ },
+ "classification": {
+  "wall_seconds": 24.12,
+  "blobs": 21392,
+  "agree": {
+   "source_classified": 4235,
+   "empty_is_nil": 4278,
+   "determinism_repeat_equals": 4278,
+   "from_cat_equals_source": 4278,
+   "from_cat_equals_source_both_classified": 4235,
+   "from_cat_flags_equal": 4278,
+   "prefix64_equals_source": 4067,
+   "prefix64_differs_from_source": 211,
+   "content_sha_matches": 4278
+  },
+  "by_classification": {
+   "BINARY": {
+    "files": 20,
+    "classified": 3,
+    "from_cat_equals_source": 20,
+    "from_cat_both_classified": 3,
+    "prefix64_equals_source": 20
+   },
+   "TEXT": {
+    "files": 4258,
+    "classified": 4232,
+    "from_cat_equals_source": 4258,
+    "from_cat_both_classified": 4232,
+    "prefix64_equals_source": 4047
+   }
+  },
+  "source_language_distribution_top20": [
+   [
+    "YAML",
+    586
+   ],
+   [
+    "Ruby",
+    110
+   ],
+   [
+    "XML",
+    81
+   ],
+   [
+    "Shell",
+    80
+   ],
+   [
+    "C++",
+    70
+   ],
+   [
+    "C",
+    65
+   ],
+   [
+    "JavaScript",
+    45
+   ],
+   [
+    "NIL",
+    43
+   ],
+   [
+    "Swift",
+    43
+   ],
+   [
+    "Text",
+    42
+   ],
+   [
+    "Grammatical Framework",
+    41
+   ],
+   [
+    "INI",
+    40
+   ],
+   [
+    "JSON",
+    40
+   ],
+   [
+    "MATLAB",
+    40
+   ],
+   [
+    "Roff Manpage",
+    33
+   ],
+   [
+    "JSON with Comments",
+    31
+   ],
+   [
+    "Hack",
+    30
+   ],
+   [
+    "Perl",
+    30
+   ],
+   [
+    "Roff",
+    30
+   ],
+   [
+    "M",
+    29
+   ]
+  ],
+  "source_languages_distinct": 770,
+  "malprog_language_distribution_top20": [],
+  "cat_program": {
+   "path": "cat_compact.mal",
+   "sha256": "dd8f9b106dd4b25cf190a2fa1cf7f1b03db08d2cb30d4144f8791d46a347079b",
+   "language": null,
+   "strategy": "Linguist::Classifier",
+   "error": null,
+   "empty_is_nil": true
+  },
+  "strategy_distribution": [
+   [
+    "Linguist::Strategy::Extension",
+    1881
+   ],
+   [
+    "Linguist::Heuristics",
+    1613
+   ],
+   [
+    "Linguist::Strategy::Filename",
+    338
+   ],
+   [
+    "Linguist::Classifier",
+    250
+   ],
+   [
+    "Linguist::Shebang",
+    103
+   ],
+   [
+    "Linguist::Strategy::Modeline",
+    75
+   ],
+   [
+    "bail_out",
+    16
+   ],
+   [
+    "Linguist::Strategy::XML",
+    2
+   ]
+  ]
+ }
+}
