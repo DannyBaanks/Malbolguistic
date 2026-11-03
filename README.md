@@ -1,29 +1,150 @@
-# MALBOGUISTIC
+# Malbolguistic
 
-> GitHub Linguist actualmente no reconoce Malbolge.
->
-> Asi que tradujimos GitHub Linguist a Malbolge en su lugar. :p
+[![Malbolge: executable](https://img.shields.io/badge/Malbolge-EXECUTABLE-b22222)](malbolge/)
+[![Linguist: Malbolge](https://img.shields.io/badge/Linguist%209.7.0-Malbolge%3A%20NIL-555555)](evidence/linguist_pipeline_sweep_20261102T043612Z/)
+[![Evidence](https://img.shields.io/badge/evidence-SHA--256%20%2B%20canonical%20oracles-764ba2)](evidence/VERDICTS.md)
 
-**Este proyecto NO reclama que Linguist se ejecute en Malbolge.**
+*GitHub Linguist, but the language it refuses to recognize has taken over the repository.*
 
-Este proyecto toma un snapshot fijado de [github-linguist/linguist](https://github.com/github-linguist/linguist)
-y lo transporta mecanicamente, byte por byte, a traves de una cadena de herramientas de Malbolge,
-verificando reconstruccion byte-identica con SHA-256.
+> **The joke:** Linguist doesn't recognize Malbolge. So we sent Linguist through Malbolge instead. :p
 
+[GitHub Linguist](https://github.com/github-linguist/linguist) detects languages, filters generated and vendored files, and produces language statistics. **Malbolguistic** is its deliberately cursed, unofficial reflection: a pinned snapshot of Linguist's files is wrapped, synthesized into **real Malbolge programs where feasible**, executed under canonical interpreters, reconstructed, and checked byte for byte.
+
+Here, **Malbolge is the main character**. Ruby, C, YAML and the other languages are merely visitors to the eighth circle.
+
+**This is NOT GitHub Linguist rewritten in Malbolge.** It does **not** replace the `github-linguist` gem, run the Ruby library inside a Malbolge VM, or make GitHub recognize `.mal`. The snapshot of Linguist 9.7.0 examined in this experiment actually returns **`NIL` for Malbolge**. The runnable Malbolge artifacts and the limits of what they establish are documented below.
+
+## Documentation
+
+- [How the infernal translation works](#how-it-works) — three levels, three different claims.
+- [Installation](#installation) — no magical `gem install malbolguistic`.
+- [Usage](#usage) — actual commands for the checked-in artifacts.
+- [Full experimental record](#three-levels-one-very-real-distinction) — all numbers, hashes, exceptions and negative controls.
+- [Hands-on guide](GUIA.md) — commands, prerequisites and common failure modes.
+- [Evidence and claim verdicts](evidence/VERDICTS.md) — what was demonstrated, inferred or rejected.
+- [Source provenance](SOURCE_REPO.txt) · [pinned upstream commit](SOURCE_COMMIT.txt) · [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Installation
+
+Unlike Linguist, Malbolguistic is **not a Ruby gem**. Clone this repository to inspect the committed artifacts and run the verification tools:
+
+```bash
+git clone https://github.com/DannyBaanks/Malbolguistic.git
+cd Malbolguistic
+python3 tools/verify_corpus.py
 ```
-github-linguist/linguist  (snapshot fijado, commit SOURCE_COMMIT.txt)
-        ↓
-Malbolge-Translator  (vendored bajo vendor/malbolge_translator/)
-        ↓
-Nivel 1: mirror/<path>.malrt1     (envoltura MALRT1, cada archivo de texto, codec-verificado)
-Nivel 2: malbolge/<path>.mal      (programas REALES de Malbolge, ejecutados, verificados)
-Nivel 3: vendor/cat/cat_compact.mal (UN solo programa; cada archivo entra por stdin y
-          sale por stdout byte-exacto — no hay traduccion por archivo)
-        ↓
-traduccion reversa (decode + ejecucion)
-        ↓
-paridad SHA-256 contra los bytes originales
+
+The canonical corpus verifier uses the checked-in `.mal` programs and pinned C interpreters; it **does not** require the Python Malbolge generator. Building those C interpreters requires a working C toolchain.
+
+For optional workflows, use **Python 3.10+** for the Level 1 tooling, **Zig 0.16** for the canonical Zig VM/search port, and the dependencies described in [GUIA.md](GUIA.md) for the Ruby-based Linguist classification checks. The original Python generator is installed from a local toolkit copy, not from PyPI; it is not necessary for re-verification.
+
+### Dependencies (the honest version)
+
+| Task | What is needed |
+| --- | --- |
+| Verify committed Level 2 programs | Python and a C toolchain |
+| Run the full-catalog Level 3 Cat | Python and pinned C interpreters |
+| Rebuild/search Level 2 using Zig | Zig 0.16, plus Python for the provided orchestration tool |
+| Re-run language classification | Ruby runtime and dependencies documented in [GUIA.md](GUIA.md) |
+| Ask upstream Linguist to recognize Malbolge | **Not implemented here.** That's the joke. |
+
+## Usage
+
+### Command line usage
+
+There is no invented `malbolguistic` executable. These commands exist in this repo:
+
+```bash
+# All committed Level 2 .mal programs, executed and checked against two C oracles:
+python3 tools/verify_corpus.py
+
+# One canonical Malbolge Cat, fed the entire TEXT catalog via stdin:
+python3 tools/verify_level3.py
+
+# Reconstruct files through Malbolge, then classify with the pinned Linguist snapshot:
+python3 tools/verify_linguist_pipeline.py
+
+# Include all 4,258 TEXT files and 20 BINARY files through Level 3:
+python3 tools/verify_linguist_pipeline.py --level 3 --include-non-text
+
+# Regenerate/verify Level 1 envelopes while reusing sealed Level 2 artifacts:
+python3 tools/build_malboguistic.py --level1-only
 ```
+
+Use the [guide](GUIA.md) before rerunning full evidence campaigns. Some commands create **new** evidence directories, and some need optional toolchains. The tests are not a claim that the current host has just executed them.
+
+### Language breakdown (the punchline)
+
+The pinned Linguist snapshot classifies returned source bytes; it does **not** understand Malbolge as a language. This table reports the repository's sealed experiment, **not** `github-linguist` output from GitHub.com:
+
+| What went through the trench | Measured outcome |
+| --- | --- |
+| Level 1: text files mirrored into `MALRT1` envelopes | **4,258/4,258** byte-exact |
+| Level 2: distinct synthesized, executable Malbolge programs | **1,605/1,605** canonical roundtrips |
+| Level 3: one canonical `cat_compact.mal` fed files through stdin | **4,278/4,278** files reconstructed, including 20 binary files |
+| Linguist languages identified across the Level 3 source catalog | **770 distinct languages** |
+| Malbolge recognized by the pinned Linguist classifier | **NIL** |
+
+**So yes, there is executable Malbolge here. No, the official classifier did not suddenly learn Malbolge.** That's why the repo exists.
+
+### How it works
+
+```text
+              github-linguist/linguist
+                 (pinned source snapshot)
+                            |
+                   +--------+--------+
+                   |                 |
+       LEVEL 1: mirror/*.malrt1       |   All TEXT files:
+       ASCII envelope + SHA-256      |   codec roundtrip
+                   |                 |
+       LEVEL 2: malbolge/*.mal        |   1,605 TEXT files:
+       individual REAL Malbolge       |   run + decode + compare
+       programs                      |
+                   |                 |
+       LEVEL 3: vendor/cat/          |   4,278 TEXT/BINARY files:
+       cat_compact.mal               |   one program + stdin/stdout
+                   |                 |
+                   +--------+--------+
+                            |
+                    canonical oracles
+                    byte equality + hashes
+                            |
+                   Linguist classification
+                            |
+              Malbolge?  NIL.  Of course.
+```
+
+**Level 1** makes an ASCII `MALRT1:<base64>:<sha256>` envelope. It is **not** a Malbolge program.
+
+**Level 2** synthesizes a separate, real `.mal` program for each supported text file. Each program emits its envelope, which is decoded and compared against the pinned source. The other files are explicitly skipped under the size/resource boundary, not silently counted as passing.
+
+**Level 3** takes a different route: a **single** canonical Malbolge Cat program receives each source file via stdin and reproduces its bytes via stdout. This covers the full present TEXT/BINARY catalog; it does **not** synthesize a program per file.
+
+### Why Zig is in the inferno
+
+Malbolge was the point; Zig made the experiments practical. The port's sealed 12-target differential comparison found **44.33 s in Python vs 0.568 s in Zig (~78×)** using a shared random stream and matching program bytes. The separate 379-target Zig corpus run completed in **63 s**; 1,226 further artifacts took **933 s**.
+
+These are **different workloads**, not a universal `78×` language benchmark. Read the [differential report](evidence/zig_search_port_gate_20261101T204042ZZ/REPORT.md) and [full-corpus report](evidence/zig_search_port_gate_20261101T204229ZZ/REPORT.md).
+
+## Contributing
+
+Interested in Malbolge, static analysis, reproducibility or making a language detector confront a language it doesn't know? Issues and PRs are welcome.
+
+For technical changes, please include a reproducible command, input and output hashes, scope of the result, and a negative control when applicable. **A passing codec test is not a passing Malbolge execution.** Don't modify sealed evidence to make a result look better.
+
+For context and exact reproduction instructions see [GUIA.md](GUIA.md) and [the verdict matrix](evidence/VERDICTS.md).
+
+## License
+
+Malbolguistic's own build tools are MIT-licensed ([LICENSE](LICENSE)). The vendored Linguist snapshot, translator, canonical engines and Cat retain their own documented licenses and provenance; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This project is **unofficial** and is not endorsed by GitHub or the Linguist maintainers.
+
+---
+
+## Three levels, one very real distinction
+
+**The parody ends here. The receipts do not.** Everything below is the original technical record, preserved to keep the exact evidence and limits visible.
+
 
 ## Tres niveles, sin falsos
 
