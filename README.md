@@ -1,5 +1,7 @@
-# Malbolguistic
+# Malbolguistic v2.0 — GitHub Linguist Reflected through Malbolge Synthesis
 
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)](https://github.com/DannyBaanks/Malbolguistic)
+[![PR #1](https://img.shields.io/badge/PR%20%231-Merged-brightgreen.svg)](https://github.com/DannyBaanks/Malbolguistic/pull/1)
 [![Malbolge: executable](https://img.shields.io/badge/Malbolge-EXECUTABLE-b22222)](malbolge/)
 [![Linguist: Malbolge](https://img.shields.io/badge/Linguist%209.7.0-Malbolge%3A%20NIL-555555)](evidence/linguist_pipeline_sweep_20261102T043612Z/)
 [![Evidence](https://img.shields.io/badge/evidence-SHA--256%20%2B%20canonical%20oracles-764ba2)](evidence/VERDICTS.md)
